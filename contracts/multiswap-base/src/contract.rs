@@ -1,10 +1,12 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 
-use multiswap::MultiswapExecuteMsg;
+use multiswap::{AddLiquidityEvent, BridgeSwapEvent, MultiswapExecuteMsg, RemoveLiquidityEvent};
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
+use crate::state::LIQUIDITIES;
+use cw_utils::Event;
 // use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
 
 // version info for migration info
@@ -83,7 +85,28 @@ pub fn execute_add_liquidity(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let from_addr = env.deps.api.addr_validate(&from)?;
+
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
     let mut rsp = Response::default();
+    LIQUIDITIES.update(
+        deps.storage,
+        (&from_addr, token.as_str()),
+        |balance: Option<Uint128>| -> StdResult<_> {
+            Ok(balance.unwrap_or_default().checked_add(amount)?)
+        },
+    )?;
+
+    let event = AddLiquidityEvent {
+        from: from.as_str(),
+        token: token.as_str(),
+        amount,
+    };
+    event.add_attributes(&mut rsp);
     Ok(rsp)
 }
 
@@ -94,7 +117,27 @@ pub fn execute_remove_liquidity(
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let from_addr = env.deps.api.addr_validate(&from)?;
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
     let mut rsp = Response::default();
+    LIQUIDITIES.update(
+        deps.storage,
+        (&from_addr, token.as_str()),
+        |balance: Option<Uint128>| -> StdResult<_> {
+            Ok(balance.unwrap_or_default().checked_sub(amount)?)
+        },
+    )?;
+
+    let event = RemoveLiquidityEvent {
+        from: from.as_str(),
+        token: token.as_str(),
+        amount,
+    };
+    event.add_attributes(&mut rsp);
     Ok(rsp)
 }
 
@@ -123,5 +166,15 @@ pub fn execute_swap(
 ) -> Result<Response, ContractError> {
     let from_addr = env.deps.api.addr_validate(&from)?;
     let mut rsp = Response::default();
+
+    let event = BridgeSwapEvent {
+        from: from.as_str(),
+        token: token.as_str(),
+        amount,
+        target_chain_id: &target_chain_id,
+        target_token: &target_token,
+        target_address: &target_address,
+    };
+    event.add_attributes(&mut rsp);
     Ok(rsp)
 }

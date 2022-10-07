@@ -1,4 +1,4 @@
-pub use crate::event::{ApproveAllEvent, MetadataEvent, TransferEvent};
+pub use crate::event::{AddLiquidityEvent, BridgeSwapEvent, RemoveLiquidityEvent};
 pub use crate::msg::{MultiswapExecuteMsg, TokenId};
 pub use crate::query::MultiswapQueryMsg;
 

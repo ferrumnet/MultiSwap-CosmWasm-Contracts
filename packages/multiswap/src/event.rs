@@ -1,22 +1,58 @@
 use cosmwasm_std::{attr, Response, Uint128};
+use cw_utils::Event;
 
-/// Tracks token transfer/mint/burn actions
-pub struct TransferEvent<'a> {
-    pub from: Option<&'a str>,
-    pub to: Option<&'a str>,
-    pub token_id: &'a str,
+/// Tracks liquidity additions
+pub struct AddLiquidityEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
     pub amount: Uint128,
 }
 
-/// Tracks token metadata changes
-pub struct MetadataEvent<'a> {
-    pub url: &'a str,
-    pub token_id: &'a str,
+impl<'a> Event for AddLiquidityEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "add_liquidity"));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes.push(attr("from", self.from));
+    }
 }
 
-/// Tracks approve_all status changes
-pub struct ApproveAllEvent<'a> {
-    pub sender: &'a str,
-    pub operator: &'a str,
-    pub approved: bool,
+/// Tracks liquidity removals
+pub struct RemoveLiquidityEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
+    pub amount: Uint128,
+}
+
+impl<'a> Event for RemoveLiquidityEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "remove_liquidity"));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
+/// Tracks swap events
+pub struct BridgeSwapEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
+    pub amount: Uint128,
+    pub target_chain_id: &'a str,
+    pub target_token: &'a str,
+    pub target_address: &'a str,
+}
+
+impl<'a> Event for BridgeSwapEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "swap"));
+        rsp.attributes.push(attr("from", self.from));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes
+            .push(attr("target_chain_id", self.target_chain_id));
+        rsp.attributes.push(attr("target_token", self.target_token));
+        rsp.attributes
+            .push(attr("target_address", self.target_address));
+    }
 }
