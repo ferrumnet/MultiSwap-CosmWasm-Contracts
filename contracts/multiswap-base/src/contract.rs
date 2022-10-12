@@ -1,16 +1,18 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, BankMsg, CosmosMsg, DepsMut, Env, MessageInfo, Response, StdResult, Uint128,
+    coins, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    Order, Response, StdError, StdResult, Storage, Uint128,
 };
+use cw_storage_plus::Bound;
 
 use multiswap::{
-    AddLiquidityEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, MultiswapExecuteMsg,
-    RemoveLiquidityEvent,
+    AddLiquidityEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, Liquidity, MultiswapExecuteMsg,
+    MultiswapQueryMsg, RemoveLiquidityEvent,
 };
 
-use crate::error::ContractError;
+use crate::error::{self, ContractError};
 use crate::msg::InstantiateMsg;
-use crate::state::LIQUIDITIES;
+use crate::state::{LIQUIDITIES, SIGNERS};
 use cw_utils::Event;
 // use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
 
@@ -100,9 +102,20 @@ pub fn execute_add_liquidity(
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
-        (&from_addr, token.as_str()),
-        |balance: Option<Uint128>| -> StdResult<_> {
-            Ok(balance.unwrap_or_default().checked_add(amount)?)
+        (token.as_str(), &from_addr),
+        |liquidity: Option<Liquidity>| -> StdResult<_> {
+            if let Some(unwrapped) = liquidity {
+                return Ok(Liquidity {
+                    user: from.to_string(),
+                    token: token.to_string(),
+                    amount: unwrapped.amount.checked_add(amount)?,
+                });
+            }
+            return Ok(Liquidity {
+                user: from.to_string(),
+                token: token.to_string(),
+                amount: amount,
+            });
         },
     )?;
 
@@ -131,9 +144,16 @@ pub fn execute_remove_liquidity(
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
-        (&from_addr, token.as_str()),
-        |balance: Option<Uint128>| -> StdResult<_> {
-            Ok(balance.unwrap_or_default().checked_sub(amount)?)
+        (token.as_str(), &from_addr),
+        |liquidity: Option<Liquidity>| -> StdResult<_> {
+            if let Some(unwrapped) = liquidity {
+                return Ok(Liquidity {
+                    user: from.to_string(),
+                    token: token.to_string(),
+                    amount: unwrapped.amount.checked_sub(amount)?,
+                });
+            }
+            return Err(StdError::generic_err("liquidity does not exist"));
         },
     )?;
 
@@ -244,3 +264,90 @@ pub fn execute_swap(
 
 //     return signer, messageBytes, nil
 // }
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary> {
+    match msg {
+        MultiswapQueryMsg::Liquidity { owner, token } => {
+            to_binary(&query_liquidity(deps, owner, token)?)
+        }
+        MultiswapQueryMsg::AllLiquidity {} => to_binary(&query_all_liquidity(deps)?),
+        MultiswapQueryMsg::Signers {} => to_binary(&query_signers(deps)?),
+    }
+}
+
+pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Liquidity> {
+    let owner_addr = deps.api.addr_validate(&owner)?;
+    if let Ok(Some(liquidity)) = LIQUIDITIES.may_load(deps.storage, (&token, &owner_addr)) {
+        return Ok(liquidity);
+    }
+    return Err(StdError::generic_err("liquidity does not exist"));
+}
+
+pub fn query_all_liquidity(deps: Deps) -> StdResult<Vec<Liquidity>> {
+    // Ok(LIQUIDITIES.may_load(deps.storage)?.unwrap_or_default())
+    // Err(StdError::generic_err("not implemented yet"))
+    // let limit: u32 = 30;
+    return read_liquidities(deps.storage, deps.api);
+}
+
+pub fn query_signers(deps: Deps) -> StdResult<Vec<String>> {
+    // Ok(SIGNERS.may_load(deps.storage)?.unwrap_or_default())
+    Ok(read_signers(deps.storage, deps.api))
+}
+
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
+pub fn read_liquidities(
+    storage: &dyn Storage,
+    api: &dyn Api,
+    // start_after: Option<(String, String)>,
+    // limit: Option<u32>,
+) -> StdResult<Vec<Liquidity>> {
+    let limit = DEFAULT_LIMIT as usize;
+    // let start = calc_range_start(start_after);
+    // let start_key = start.map(Bound::exclusive);
+
+    LIQUIDITIES
+        .range(storage, None, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            let (_, v) = item?;
+            v.to_normal(api)
+        })
+        .collect::<StdResult<Vec<Liquidity>>>()
+}
+
+// this will set the first key after the provided key, by appending a 1 byte
+fn calc_range_start(start_after: Option<(String, String)>) -> Option<Vec<u8>> {
+    start_after.map(|info| {
+        let mut v = [info.0.as_bytes(), info.1.as_bytes()]
+            .concat()
+            .as_slice()
+            .to_vec();
+        v.push(1);
+        v
+    })
+}
+
+pub fn read_signers(
+    storage: &dyn Storage,
+    api: &dyn Api,
+    // start_after: Option<(String, String)>,
+    // limit: Option<u32>,
+) -> Vec<String> {
+    let limit = DEFAULT_LIMIT as usize;
+    // let start = calc_range_start(start_after);
+    // let start_key = start.map(Bound::exclusive);
+
+    return SIGNERS
+        .range(storage, None, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            if let Ok((_, it)) = item {
+                return it;
+            }
+            return "".to_string();
+        })
+        .collect::<Vec<String>>();
+}
