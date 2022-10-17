@@ -6,8 +6,8 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 
 use multiswap::{
-    AddLiquidityEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, Liquidity, MultiswapExecuteMsg,
-    MultiswapQueryMsg, RemoveLiquidityEvent,
+    AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, Liquidity,
+    MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg, RemoveLiquidityEvent, RemoveSignerEvent,
 };
 
 use crate::error::{self, ContractError};
@@ -48,6 +48,10 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     let env = ExecuteEnv { deps, env, info };
     match msg {
+        MultiswapExecuteMsg::AddSigner { from, signer } => execute_add_signer(env, from, signer),
+        MultiswapExecuteMsg::RemoveSigner { from, signer } => {
+            execute_remove_signer(env, from, signer)
+        }
         MultiswapExecuteMsg::AddLiquidity {
             from,
             token,
@@ -83,6 +87,54 @@ pub fn execute(
             target_address,
         ),
     }
+}
+
+pub fn execute_add_signer(
+    env: ExecuteEnv,
+    from: String,
+    signer: String,
+) -> Result<Response, ContractError> {
+    let from_addr = env.deps.api.addr_validate(&from)?;
+
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
+    let mut rsp = Response::default();
+    SIGNERS.save(deps.storage, signer.as_str(), &signer.to_string())?;
+
+    let event = AddSignerEvent {
+        from: from.as_str(),
+        signer: signer.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
+pub fn execute_remove_signer(
+    env: ExecuteEnv,
+    from: String,
+    signer: String,
+) -> Result<Response, ContractError> {
+    let from_addr = env.deps.api.addr_validate(&from)?;
+
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
+    let mut rsp = Response::default();
+    SIGNERS.remove(deps.storage, signer.as_str());
+
+    let event = RemoveSignerEvent {
+        from: from.as_str(),
+        signer: signer.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+    Ok(rsp)
 }
 
 pub fn execute_add_liquidity(
@@ -350,4 +402,9 @@ pub fn read_signers(
             return "".to_string();
         })
         .collect::<Vec<String>>();
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    Ok(Response::default())
 }

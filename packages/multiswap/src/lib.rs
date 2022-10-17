@@ -1,7 +1,8 @@
 pub use crate::event::{
-    AddLiquidityEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, RemoveLiquidityEvent,
+    AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent,
+    RemoveLiquidityEvent, RemoveSignerEvent,
 };
-pub use crate::msg::{MultiswapExecuteMsg, TokenId};
+pub use crate::msg::{MigrateMsg, MultiswapExecuteMsg};
 pub use crate::query::{Liquidity, MultiswapQueryMsg};
 
 mod event;

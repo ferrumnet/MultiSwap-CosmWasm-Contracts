@@ -1,6 +1,34 @@
 use cosmwasm_std::{attr, Response, Uint128};
 use cw_utils::Event;
 
+/// Tracks signer additions
+pub struct AddSignerEvent<'a> {
+    pub from: &'a str,
+    pub signer: &'a str,
+}
+
+impl<'a> Event for AddSignerEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "add_signer"));
+        rsp.attributes.push(attr("signer", self.signer));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
+/// Tracks signer removals
+pub struct RemoveSignerEvent<'a> {
+    pub from: &'a str,
+    pub signer: &'a str,
+}
+
+impl<'a> Event for RemoveSignerEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "remove_signer"));
+        rsp.attributes.push(attr("signer", self.signer));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
 /// Tracks liquidity additions
 pub struct AddLiquidityEvent<'a> {
     pub from: &'a str,
