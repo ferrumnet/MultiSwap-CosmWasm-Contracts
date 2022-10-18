@@ -8,11 +8,12 @@ use cw_storage_plus::Bound;
 use multiswap::{
     AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, Liquidity,
     MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg, RemoveLiquidityEvent, RemoveSignerEvent,
+    TransferOwnershipEvent,
 };
 
 use crate::error::{self, ContractError};
 use crate::msg::InstantiateMsg;
-use crate::state::{LIQUIDITIES, SIGNERS};
+use crate::state::{LIQUIDITIES, OWNER, SIGNERS};
 use cw_utils::Event;
 // use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
 
@@ -27,8 +28,8 @@ pub fn instantiate(
     _info: MessageInfo,
     msg: InstantiateMsg,
 ) -> StdResult<Response> {
-    let minter = deps.api.addr_validate(&msg.owner)?;
-    // MINTER.save(deps.storage, &minter)?;
+    let owner = deps.api.addr_validate(&msg.owner)?;
+    OWNER.save(deps.storage, &owner)?;
     Ok(Response::default())
 }
 
@@ -48,30 +49,25 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     let env = ExecuteEnv { deps, env, info };
     match msg {
-        MultiswapExecuteMsg::AddSigner { from, signer } => execute_add_signer(env, from, signer),
-        MultiswapExecuteMsg::RemoveSigner { from, signer } => {
-            execute_remove_signer(env, from, signer)
+        MultiswapExecuteMsg::TransferOwnership { new_owner } => {
+            execute_ownership_transfer(env, new_owner)
         }
-        MultiswapExecuteMsg::AddLiquidity {
-            from,
-            token,
-            amount,
-        } => execute_add_liquidity(env, from, token, amount),
-        MultiswapExecuteMsg::RemoveLiquidity {
-            from,
-            token,
-            amount,
-        } => execute_remove_liquidity(env, from, token, amount),
+        MultiswapExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
+        MultiswapExecuteMsg::RemoveSigner { signer } => execute_remove_signer(env, signer),
+        MultiswapExecuteMsg::AddLiquidity { token, amount } => {
+            execute_add_liquidity(env, token, amount)
+        }
+        MultiswapExecuteMsg::RemoveLiquidity { token, amount } => {
+            execute_remove_liquidity(env, token, amount)
+        }
         MultiswapExecuteMsg::WithdrawSigned {
-            from,
             payee,
             token,
             amount,
             salt,
             signature,
-        } => execute_withdraw_signed(env, from, payee, token, amount, salt, signature),
+        } => execute_withdraw_signed(env, payee, token, amount, salt, signature),
         MultiswapExecuteMsg::Swap {
-            from,
             token,
             amount,
             target_chain_id,
@@ -79,7 +75,6 @@ pub fn execute(
             target_address,
         } => execute_swap(
             env,
-            from,
             token,
             amount,
             target_chain_id,
@@ -89,48 +84,66 @@ pub fn execute(
     }
 }
 
-pub fn execute_add_signer(
+pub fn execute_ownership_transfer(
     env: ExecuteEnv,
-    from: String,
-    signer: String,
+    new_owner: String,
 ) -> Result<Response, ContractError> {
-    let from_addr = env.deps.api.addr_validate(&from)?;
+    let ExecuteEnv { deps, env, info } = env;
+    let new_owner_addr = deps.api.addr_validate(&new_owner)?;
 
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut rsp = Response::default();
+    OWNER.save(deps.storage, &new_owner_addr)?;
+
+    let event = TransferOwnershipEvent {
+        prev_owner: info.sender.as_str(),
+        new_owner: new_owner.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
+pub fn execute_add_signer(env: ExecuteEnv, signer: String) -> Result<Response, ContractError> {
     let ExecuteEnv {
         mut deps,
         env,
         info,
     } = env;
 
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut rsp = Response::default();
     SIGNERS.save(deps.storage, signer.as_str(), &signer.to_string())?;
 
     let event = AddSignerEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         signer: signer.as_str(),
     };
     event.add_attributes(&mut rsp);
     Ok(rsp)
 }
 
-pub fn execute_remove_signer(
-    env: ExecuteEnv,
-    from: String,
-    signer: String,
-) -> Result<Response, ContractError> {
-    let from_addr = env.deps.api.addr_validate(&from)?;
-
+pub fn execute_remove_signer(env: ExecuteEnv, signer: String) -> Result<Response, ContractError> {
     let ExecuteEnv {
         mut deps,
         env,
         info,
     } = env;
 
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut rsp = Response::default();
     SIGNERS.remove(deps.storage, signer.as_str());
 
     let event = RemoveSignerEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         signer: signer.as_str(),
     };
     event.add_attributes(&mut rsp);
@@ -139,12 +152,9 @@ pub fn execute_remove_signer(
 
 pub fn execute_add_liquidity(
     env: ExecuteEnv,
-    from: String,
     token: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let from_addr = env.deps.api.addr_validate(&from)?;
-
     let ExecuteEnv {
         mut deps,
         env,
@@ -154,17 +164,17 @@ pub fn execute_add_liquidity(
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
-        (token.as_str(), &from_addr),
+        (token.as_str(), &info.sender),
         |liquidity: Option<Liquidity>| -> StdResult<_> {
             if let Some(unwrapped) = liquidity {
                 return Ok(Liquidity {
-                    user: from.to_string(),
+                    user: info.sender.to_string(),
                     token: token.to_string(),
                     amount: unwrapped.amount.checked_add(amount)?,
                 });
             }
             return Ok(Liquidity {
-                user: from.to_string(),
+                user: info.sender.to_string(),
                 token: token.to_string(),
                 amount: amount,
             });
@@ -172,7 +182,7 @@ pub fn execute_add_liquidity(
     )?;
 
     let event = AddLiquidityEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         token: token.as_str(),
         amount,
     };
@@ -182,11 +192,9 @@ pub fn execute_add_liquidity(
 
 pub fn execute_remove_liquidity(
     env: ExecuteEnv,
-    from: String,
     token: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let from_addr = env.deps.api.addr_validate(&from)?;
     let ExecuteEnv {
         mut deps,
         env,
@@ -196,11 +204,11 @@ pub fn execute_remove_liquidity(
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
-        (token.as_str(), &from_addr),
+        (token.as_str(), &info.sender),
         |liquidity: Option<Liquidity>| -> StdResult<_> {
             if let Some(unwrapped) = liquidity {
                 return Ok(Liquidity {
-                    user: from.to_string(),
+                    user: info.sender.to_string(),
                     token: token.to_string(),
                     amount: unwrapped.amount.checked_sub(amount)?,
                 });
@@ -210,7 +218,7 @@ pub fn execute_remove_liquidity(
     )?;
 
     let event = RemoveLiquidityEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         token: token.as_str(),
         amount,
     };
@@ -220,7 +228,6 @@ pub fn execute_remove_liquidity(
 
 pub fn execute_withdraw_signed(
     env: ExecuteEnv,
-    from: String,
     payee: String,
     token: String,
     amount: Uint128,
@@ -250,9 +257,15 @@ pub fn execute_withdraw_signed(
         amount: coins(amount.u128(), &token),
     });
 
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
     let mut rsp = Response::new().add_message(bank_send_msg);
     let event = BridgeWithdrawSignedEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         payee: payee.as_str(),
         token: token.as_str(),
         amount,
@@ -265,18 +278,22 @@ pub fn execute_withdraw_signed(
 
 pub fn execute_swap(
     env: ExecuteEnv,
-    from: String,
     token: String,
     amount: Uint128,
     target_chain_id: String,
     target_token: String,
     target_address: String,
 ) -> Result<Response, ContractError> {
-    let from_addr = env.deps.api.addr_validate(&from)?;
     let mut rsp = Response::default();
 
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
     let event = BridgeSwapEvent {
-        from: from.as_str(),
+        from: info.sender.as_str(),
         token: token.as_str(),
         amount,
         target_chain_id: &target_chain_id,
