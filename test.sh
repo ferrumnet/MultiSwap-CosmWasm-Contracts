@@ -22,3 +22,6 @@
 # cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
 # NEW_CODEID=2
 # cudos-noded tx wasm migrate $CONTRACT $NEW_CODEID '{}' --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
+
+# upgrade ownership transfer
+# cudos-noded tx wasm set-contract-admin $CONTRACT $VALIDATOR --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
