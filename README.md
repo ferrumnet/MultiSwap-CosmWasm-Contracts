@@ -1,4 +1,4 @@
-# Ferrum CosmWasm Contracts
+# MultiSwap CosmWasm Contracts
 
 ## Local build
 
