@@ -15,6 +15,12 @@ pub enum MultiswapExecuteMsg {
     RemoveSigner {
         signer: String,
     },
+    AddFoundryAsset {
+        token: String,
+    },
+    RemoveFoundryAsset {
+        token: String,
+    },
     AddLiquidity {
         token: String,
         amount: Uint128,

@@ -43,6 +43,34 @@ impl<'a> Event for RemoveSignerEvent<'a> {
     }
 }
 
+/// Tracks foundry asset additions
+pub struct AddFoundryAssetEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
+}
+
+impl<'a> Event for AddFoundryAssetEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "add_foundry_asset"));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
+/// Tracks foundry asset removals
+pub struct RemoveFoundryAssetEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
+}
+
+impl<'a> Event for RemoveFoundryAssetEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "remove_foundry_asset"));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
 /// Tracks liquidity additions
 pub struct AddLiquidityEvent<'a> {
     pub from: &'a str,
