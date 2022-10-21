@@ -9,6 +9,7 @@ pub enum MultiswapQueryMsg {
     Liquidity { owner: String, token: String },
     AllLiquidity {},
     Signers {},
+    FoundryAssets {},
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
