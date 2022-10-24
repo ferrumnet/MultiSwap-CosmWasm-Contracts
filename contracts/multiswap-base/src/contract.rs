@@ -6,14 +6,14 @@ use cosmwasm_std::{
 use cw_storage_plus::Bound;
 
 use multiswap::{
-    AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent, BridgeWithdrawSignedEvent, Liquidity,
-    MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg, RemoveLiquidityEvent, RemoveSignerEvent,
-    TransferOwnershipEvent,
+    AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
+    BridgeWithdrawSignedEvent, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
+    RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, TransferOwnershipEvent,
 };
 
 use crate::error::{self, ContractError};
 use crate::msg::InstantiateMsg;
-use crate::state::{LIQUIDITIES, OWNER, SIGNERS};
+use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS};
 use cw_utils::Event;
 // use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
 
@@ -54,6 +54,10 @@ pub fn execute(
         }
         MultiswapExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
         MultiswapExecuteMsg::RemoveSigner { signer } => execute_remove_signer(env, signer),
+        MultiswapExecuteMsg::AddFoundryAsset { token } => execute_add_foundry_asset(env, token),
+        MultiswapExecuteMsg::RemoveFoundryAsset { token } => {
+            execute_remove_foundry_asset(env, token)
+        }
         MultiswapExecuteMsg::AddLiquidity { token, amount } => {
             execute_add_liquidity(env, token, amount)
         }
@@ -150,6 +154,56 @@ pub fn execute_remove_signer(env: ExecuteEnv, signer: String) -> Result<Response
     Ok(rsp)
 }
 
+pub fn execute_add_foundry_asset(
+    env: ExecuteEnv,
+    token: String,
+) -> Result<Response, ContractError> {
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut rsp = Response::default();
+    FOUNDRY_ASSETS.save(deps.storage, token.as_str(), &token.to_string())?;
+
+    let event = AddFoundryAssetEvent {
+        from: info.sender.as_str(),
+        token: token.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
+pub fn execute_remove_foundry_asset(
+    env: ExecuteEnv,
+    token: String,
+) -> Result<Response, ContractError> {
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut rsp = Response::default();
+    FOUNDRY_ASSETS.remove(deps.storage, token.as_str());
+
+    let event = RemoveFoundryAssetEvent {
+        from: info.sender.as_str(),
+        token: token.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
 pub fn execute_add_liquidity(
     env: ExecuteEnv,
     token: String,
@@ -160,6 +214,10 @@ pub fn execute_add_liquidity(
         env,
         info,
     } = env;
+
+    if !is_foundry_asset(deps.storage, token.to_string()) {
+        return Err(ContractError::Unauthorized {});
+    }
 
     let mut rsp = Response::default();
     LIQUIDITIES.update(
@@ -201,6 +259,10 @@ pub fn execute_remove_liquidity(
         info,
     } = env;
 
+    if !is_foundry_asset(deps.storage, token.to_string()) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
@@ -234,6 +296,10 @@ pub fn execute_withdraw_signed(
     salt: String,
     signature: String,
 ) -> Result<Response, ContractError> {
+    if !is_foundry_asset(env.deps.storage, token.to_string()) {
+        return Err(ContractError::Unauthorized {});
+    }
+
     let payee_addr = env.deps.api.addr_validate(&payee)?;
 
     // TODO: gets signer from params
@@ -243,7 +309,7 @@ pub fn execute_withdraw_signed(
     // }
 
     // TODO: ensure that the signer is registered on-chain
-    // if !k.IsSigner(ctx, signer.String()) {
+    // if is_signer(env.storage, signer.String()) {
     //     return types.ErrInvalidSigner(k.codespace)
     // }
 
@@ -342,6 +408,7 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
         }
         MultiswapQueryMsg::AllLiquidity {} => to_binary(&query_all_liquidity(deps)?),
         MultiswapQueryMsg::Signers {} => to_binary(&query_signers(deps)?),
+        MultiswapQueryMsg::FoundryAssets {} => to_binary(&query_foundry_assets(deps)?),
     }
 }
 
@@ -361,8 +428,11 @@ pub fn query_all_liquidity(deps: Deps) -> StdResult<Vec<Liquidity>> {
 }
 
 pub fn query_signers(deps: Deps) -> StdResult<Vec<String>> {
-    // Ok(SIGNERS.may_load(deps.storage)?.unwrap_or_default())
     Ok(read_signers(deps.storage, deps.api))
+}
+
+pub fn query_foundry_assets(deps: Deps) -> StdResult<Vec<String>> {
+    Ok(read_foundry_assets(deps.storage, deps.api))
 }
 
 const MAX_LIMIT: u32 = 30;
@@ -419,6 +489,42 @@ pub fn read_signers(
             return "".to_string();
         })
         .collect::<Vec<String>>();
+}
+
+pub fn is_signer(storage: &dyn Storage, signer: String) -> bool {
+    if let Ok(Some(_)) = SIGNERS.may_load(storage, signer.as_str()) {
+        return true;
+    }
+    return false;
+}
+
+pub fn read_foundry_assets(
+    storage: &dyn Storage,
+    api: &dyn Api,
+    // start_after: Option<(String, String)>,
+    // limit: Option<u32>,
+) -> Vec<String> {
+    let limit = DEFAULT_LIMIT as usize;
+    // let start = calc_range_start(start_after);
+    // let start_key = start.map(Bound::exclusive);
+
+    return FOUNDRY_ASSETS
+        .range(storage, None, None, Order::Ascending)
+        .take(limit)
+        .map(|item| {
+            if let Ok((_, it)) = item {
+                return it;
+            }
+            return "".to_string();
+        })
+        .collect::<Vec<String>>();
+}
+
+pub fn is_foundry_asset(storage: &dyn Storage, foundry_asset: String) -> bool {
+    if let Ok(Some(_)) = FOUNDRY_ASSETS.may_load(storage, foundry_asset.as_str()) {
+        return true;
+    }
+    return false;
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
