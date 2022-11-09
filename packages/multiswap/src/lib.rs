@@ -3,9 +3,11 @@ pub use crate::event::{
     BridgeWithdrawSignedEvent, RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent,
     TransferOwnershipEvent,
 };
+pub use crate::helpers::MultiswapContract;
 pub use crate::msg::{MigrateMsg, MultiswapExecuteMsg};
 pub use crate::query::{Liquidity, MultiswapQueryMsg};
 
 mod event;
+mod helpers;
 mod msg;
 mod query;

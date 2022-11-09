@@ -8,6 +8,7 @@ use cosmwasm_std::{Api, StdResult, Uint128};
 pub enum MultiswapQueryMsg {
     Liquidity { owner: String, token: String },
     AllLiquidity {},
+    Owner {},
     Signers {},
     FoundryAssets {},
 }
