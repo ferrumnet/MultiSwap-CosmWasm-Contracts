@@ -407,9 +407,15 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
             to_binary(&query_liquidity(deps, owner, token)?)
         }
         MultiswapQueryMsg::AllLiquidity {} => to_binary(&query_all_liquidity(deps)?),
+        MultiswapQueryMsg::Owner {} => to_binary(&query_owner(deps)?),
         MultiswapQueryMsg::Signers {} => to_binary(&query_signers(deps)?),
         MultiswapQueryMsg::FoundryAssets {} => to_binary(&query_foundry_assets(deps)?),
     }
+}
+
+pub fn query_owner(deps: Deps) -> StdResult<String> {
+    let owner = OWNER.load(deps.storage)?;
+    return Ok(owner.to_string());
 }
 
 pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Liquidity> {
