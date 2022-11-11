@@ -358,6 +358,18 @@ pub fn execute_swap(
         info,
     } = env;
 
+    // token deposit verification
+    let funds = info.funds;
+    if funds.len() != 1 {
+        return Err(ContractError::InvalidDeposit {});
+    }
+    if funds[0].denom != token {
+        return Err(ContractError::InvalidDeposit {});
+    }
+    if funds[0].amount != amount {
+        return Err(ContractError::InvalidDeposit {});
+    }
+
     let event = BridgeSwapEvent {
         from: info.sender.as_str(),
         token: token.as_str(),
