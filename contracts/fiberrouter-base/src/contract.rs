@@ -1,6 +1,6 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
+    coins, to_binary, Addr, Api, BankMsg, Binary, Coin, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
     Order, Response, StdError, StdResult, Storage, Uint128,
 };
 use cw_storage_plus::Bound;
@@ -28,6 +28,8 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     let owner = deps.api.addr_validate(&msg.owner)?;
     OWNER.save(deps.storage, &owner)?;
+    let pool = deps.api.addr_validate(&msg.pool)?;
+    POOL.save(deps.storage, &pool)?;
     Ok(Response::default())
 }
 
@@ -130,13 +132,16 @@ pub fn execute_withdraw_signed(
     // MultiswapContract is a function helper that provides several queries and message builder.
     let multiswap = MultiswapContract(contract_addr);
     // Call multiswap withdraw signed
-    let msg = multiswap.call(MultiswapExecuteMsg::WithdrawSigned {
-        payee: payee.to_string(),
-        token: token.to_string(),
-        amount: amount.clone(),
-        salt: salt.to_string(),
-        signature: signature.to_string(),
-    })?;
+    let msg = multiswap.call(
+        MultiswapExecuteMsg::WithdrawSigned {
+            payee: payee.to_string(),
+            token: token.to_string(),
+            amount: amount.clone(),
+            salt: salt.to_string(),
+            signature: signature.to_string(),
+        },
+        vec![],
+    )?;
 
     let res = Response::new()
         .add_message(msg)
@@ -155,19 +160,22 @@ pub fn execute_swap(
     target_token: String,
     target_address: String,
 ) -> Result<Response, ContractError> {
-    let deps = env.deps;
+    let ExecuteEnv { deps, env, info } = env;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
     // MultiswapContract is a function helper that provides several queries and message builder.
     let multiswap = MultiswapContract(contract_addr);
-    // Call multiswap withdraw signed
-    let msg = multiswap.call(MultiswapExecuteMsg::Swap {
-        token: token.to_string(),
-        amount: amount.clone(),
-        target_chain_id: target_chain_id.to_string(),
-        target_token: target_token.to_string(),
-        target_address: target_address.to_string(),
-    })?;
+    // Call multiswap swap
+    let msg = multiswap.call(
+        MultiswapExecuteMsg::Swap {
+            token: token.to_string(),
+            amount: amount.clone(),
+            target_chain_id: target_chain_id.to_string(),
+            target_token: target_token.to_string(),
+            target_address: target_address.to_string(),
+        },
+        info.funds,
+    )?;
 
     let res = Response::new()
         .add_message(msg)

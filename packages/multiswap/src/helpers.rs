@@ -2,8 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use cosmwasm_std::{
-    to_binary, Addr, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, Uint128, WasmMsg,
-    WasmQuery,
+    to_binary, Addr, Coin, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, Uint128,
+    WasmMsg, WasmQuery,
 };
 
 use crate::{MultiswapExecuteMsg, MultiswapQueryMsg};
@@ -18,12 +18,16 @@ impl MultiswapContract {
         self.0.clone()
     }
 
-    pub fn call<T: Into<MultiswapExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
+    pub fn call<T: Into<MultiswapExecuteMsg>>(
+        &self,
+        msg: T,
+        funds: Vec<Coin>,
+    ) -> StdResult<CosmosMsg> {
         let msg = to_binary(&msg.into())?;
         Ok(WasmMsg::Execute {
             contract_addr: self.addr().into(),
             msg,
-            funds: vec![],
+            funds: funds,
         }
         .into())
     }
