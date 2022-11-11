@@ -1,4 +1,4 @@
-# CW1155 Spec: Multiple Tokens
+# Multiswap Spec
 
 CW1155 is a specification for managing multiple tokens based on CosmWasm.
 The name and design is based on Ethereum's ERC1155 standard.
@@ -59,37 +59,3 @@ otherwise, ignore them.
 
   `from`/`to` are optional, no `from` attribute means minting, no `to` attribute means burning, but they mustn't be
   neglected at the same time.
-
-## Metadata
-
-### Queries
-
-`TokenInfo{ token_id }` - Query metadata url of `token_id`.
-
-### Events
-
-`token_info(url, token_id)`
-
-Metadata url of `token_id` is changed, `url` should point to a json file.
-
-## Enumerable
-
-### Queries
-
-Pagination is acheived via `start_after` and `limit`. Limit is a request
-set by the client, if unset, the contract will automatically set it to
-`DefaultLimit` (suggested 10). If set, it will be used up to a `MaxLimit`
-value (suggested 30). Contracts can define other `DefaultLimit` and `MaxLimit`
-values without violating the CW1155 spec, and clients should not rely on
-any particular values.
-
-If `start_after` is unset, the query returns the first results, ordered by
-lexogaphically by `token_id`. If `start_after` is set, then it returns the
-first `limit` tokens _after_ the given one. This allows straight-forward
-pagination by taking the last result returned (a `token_id`) and using it
-as the `start_after` value in a future query.
-
-`Tokens{owner, start_after, limit}` - List all token_ids that belong to a given owner.
-Return type is `TokensResponse{tokens: Vec<token_id>}`.
-
-`AllTokens{start_after, limit}` - Requires pagination. Lists all token_ids controlled by the contract.
