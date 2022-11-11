@@ -8,3 +8,5 @@ pub const OWNER: Item<Addr> = Item::new("owner");
 pub const LIQUIDITIES: Map<(&str, &Addr), Liquidity> = Map::new("liquidities");
 /// Store signers.
 pub const SIGNERS: Map<&str, String> = Map::new("signers");
+/// Store foundry assets.
+pub const FOUNDRY_ASSETS: Map<&str, String> = Map::new("foundry_assets");

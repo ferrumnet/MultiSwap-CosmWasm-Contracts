@@ -5,36 +5,12 @@ use cosmwasm_std::{Binary, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum MultiswapExecuteMsg {
+pub enum FiberRouterExecuteMsg {
     TransferOwnership {
         new_owner: String,
     },
-    AddSigner {
-        signer: String,
-    },
-    RemoveSigner {
-        signer: String,
-    },
-    AddFoundryAsset {
-        token: String,
-    },
-    RemoveFoundryAsset {
-        token: String,
-    },
-    AddLiquidity {
-        token: String,
-        amount: Uint128,
-    },
-    RemoveLiquidity {
-        token: String,
-        amount: Uint128,
-    },
-    WithdrawSigned {
-        payee: String,
-        salt: String,
-        token: String,
-        amount: Uint128,
-        signature: String,
+    SetPool {
+        pool: String,
     },
     Swap {
         token: String,
@@ -42,6 +18,13 @@ pub enum MultiswapExecuteMsg {
         target_chain_id: String,
         target_token: String,
         target_address: String,
+    },
+    WithdrawSigned {
+        payee: String,
+        salt: String,
+        token: String,
+        amount: Uint128,
+        signature: String,
     },
 }
 

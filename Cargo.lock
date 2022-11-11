@@ -263,6 +263,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "fiberrouter"
+version = "0.14.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-utils",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "fiberrouter-base"
+version = "0.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "fiberrouter",
+ "multiswap",
+ "schemars",
+ "serde",
+ "thiserror",
+]
+
+[[package]]
 name = "forward_ref"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -365,7 +391,7 @@ dependencies = [
 
 [[package]]
 name = "multiswap-base"
-version = "0.14.0"
+version = "0.0.1"
 dependencies = [
  "cosmwasm-schema",
  "cosmwasm-std",
