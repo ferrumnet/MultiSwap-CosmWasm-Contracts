@@ -1,12 +1,9 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{
-    to_binary, Addr, Coin, CosmosMsg, CustomQuery, Querier, QuerierWrapper, StdResult, Uint128,
-    WasmMsg, WasmQuery,
-};
+use cosmwasm_std::{to_binary, Addr, Coin, CosmosMsg, StdResult, WasmMsg};
 
-use crate::{MultiswapExecuteMsg, MultiswapQueryMsg};
+use crate::MultiswapExecuteMsg;
 
 /// MultiswapContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this contract.

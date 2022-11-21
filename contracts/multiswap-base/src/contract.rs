@@ -1,9 +1,8 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Order, Response, StdError, StdResult, Storage, Uint128,
+    coins, to_binary, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
+    Response, StdError, StdResult, Storage, Uint128,
 };
-use cw_storage_plus::Bound;
 
 use multiswap::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
@@ -11,15 +10,10 @@ use multiswap::{
     RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, TransferOwnershipEvent,
 };
 
-use crate::error::{self, ContractError};
+use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS};
 use cw_utils::Event;
-// use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
-
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:multiswap-base";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
