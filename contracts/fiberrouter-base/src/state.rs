@@ -1,5 +1,5 @@
-use cosmwasm_std::{Addr, Uint128};
-use cw_storage_plus::{Item, Map};
+use cosmwasm_std::Addr;
+use cw_storage_plus::Item;
 
 /// Store the owner of the contract to set pool
 pub const OWNER: Item<Addr> = Item::new("owner");
