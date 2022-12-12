@@ -1,25 +1,22 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, Addr, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo,
-    Order, Response, StdError, StdResult, Storage, Uint128,
+    coins, to_binary, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
+    Response, StdError, StdResult, Storage, Uint128,
 };
-use cw_storage_plus::Bound;
 
 use multiswap::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
     BridgeWithdrawSignedEvent, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
     RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, TransferOwnershipEvent,
+    WithdrawSignMessage,
 };
 
-use crate::error::{self, ContractError};
+use web3::signing::{keccak256, recover};
+
+use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS};
 use cw_utils::Event;
-// use crate::state::{APPROVES, BALANCES, MINTER, TOKENS};
-
-// version info for migration info
-const CONTRACT_NAME: &str = "crates.io:multiswap-base";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -302,16 +299,20 @@ pub fn execute_withdraw_signed(
 
     let payee_addr = env.deps.api.addr_validate(&payee)?;
 
-    // TODO: gets signer from params
-    // signer, messageBytes, err := get_signer(ctx.ChainID(), payee, amount, salt, signature)
-    // if err != nil {
-    //     return types.ErrUnexpectedError(k.codespace, err)
-    // }
+    // gets signer from signature recovery
+    let signer = get_signer(
+        env.env.block.chain_id,
+        payee.to_string(),
+        token.to_string(),
+        amount,
+        salt.to_string(),
+        signature.to_string(),
+    );
 
-    // TODO: ensure that the signer is registered on-chain
-    // if is_signer(env.storage, signer.String()) {
-    //     return types.ErrInvalidSigner(k.codespace)
-    // }
+    // ensure that the signer is registered on-chain
+    if !is_signer(env.deps.storage, signer.to_string()) {
+        return Err(ContractError::Unauthorized {});
+    }
 
     // TODO: avoid using same signature and salt again
     // if k.IsUsedMessage(ctx, messageBytes) {
@@ -325,7 +326,7 @@ pub fn execute_withdraw_signed(
 
     let ExecuteEnv {
         mut deps,
-        env,
+        env: _,
         info,
     } = env;
 
@@ -335,7 +336,8 @@ pub fn execute_withdraw_signed(
         payee: payee.as_str(),
         token: token.as_str(),
         amount,
-        salt: &salt,
+        signer: signer.as_str(),
+        salt: salt.as_str(),
         signature: &signature,
     };
     event.add_attributes(&mut rsp);
@@ -382,35 +384,55 @@ pub fn execute_swap(
     Ok(rsp)
 }
 
-// TODO: get_signer calculate signer from withdraw signed message parameters
-// pub fn get_signer(chainId string, payee string, amount sdk.Coin,
-//     salt string, signature []byte) (common.Address, []byte, error) {
-//     signer := common.Address{}
+pub fn eth_message(message: String) -> [u8; 32] {
+    keccak256(
+        format!(
+            "{}{}{}",
+            "\x19Ethereum Signed Message:\n",
+            message.len(),
+            message
+        )
+        .as_bytes(),
+    )
+}
 
-//     // get sign message to be used for signature verification
-//     message := &types.WithdrawSignMessage{
-//         ChainId: chainId,
-//         Payee:   payee,
-//         Amount:  amount,
-//         Salt:    salt,
-//     }
-//     messageBytes, err := json.Marshal(message)
-//     if err != nil {
-//         return signer, messageBytes, err
-//     }
+// get_signer calculate signer from withdraw signed message parameters
+pub fn get_signer(
+    chain_id: String,
+    payee: String,
+    token: String,
+    amount: Uint128,
+    salt: String,
+    signature: String,
+) -> String {
+    // get sign message to be used for signature verification
+    let message_obj = WithdrawSignMessage {
+        chain_id: chain_id,
+        payee: payee,
+        token: token,
+        amount: amount,
+        salt: salt,
+    };
 
-//     // get signer from sign message and signature
-//     if len(signature) > crypto.RecoveryIDOffset {
-//         signature[crypto.RecoveryIDOffset] -= 27 // Transform yellow paper V from 27/28 to 0/1
-//         recovered, err := crypto.SigToPub(accounts.TextHash(messageBytes), signature)
-//         if err != nil {
-//             return signer, messageBytes, err
-//         }
-//         signer = crypto.PubkeyToAddress(*recovered)
-//     }
+    // Serialize it to a JSON string.
+    let message_encoding = serde_json::to_string(&message_obj);
+    let mut message = "".to_string();
+    if let Ok(message_str) = message_encoding {
+        message = message_str.to_string()
+    }
 
-//     return signer, messageBytes, nil
-// }
+    let message = eth_message(message);
+    let signature = hex::decode(signature).unwrap();
+
+    let recovery_id = signature[64] as i32 - 27;
+    let pubkey = recover(&message, &signature[..64], recovery_id);
+    let pubkey = pubkey.unwrap();
+    let pubkey = format!("{:02X?}", pubkey);
+
+    // https://github.com/tomusdrw/rust-web3/issues/564
+    // https://crates.io/crates/ethsign
+    return pubkey;
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary> {
@@ -548,4 +570,41 @@ pub fn is_foundry_asset(storage: &dyn Storage, foundry_asset: String) -> bool {
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Response::default())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use cosmwasm_std::testing::{mock_env, mock_info};
+    use cosmwasm_std::{coins, from_binary, StdError};
+
+    #[test]
+    fn test_get_signer() {
+        /////////// signature generation script ///////////
+        // require("dotenv").config();
+        // const { Wallet, utils, providers } = require("ethers");
+        // const messageText =
+        //     '{"chain_id":"chain_id","payee":"payee","token":"token","amount":"10000","salt":"salt"}';
+        // let provider = new providers.JsonRpcProvider();
+        // let privKey = process.env.PRIVATE_KEY;
+        // const wallet = new Wallet(privKey, provider);
+        // const signature = await wallet.signMessage(messageText);
+        // console.log("signature", signature);
+        // console.log("address", wallet.address);
+
+        let signer = get_signer(
+            "chain_id".to_string(),
+            "payee".to_string(),
+            "token".to_string(),
+            Uint128::new(10000),
+            "salt".to_string(),
+            "a112b6508d535f091b5de8877b34213aebca322c8a4edfbdb5002416343f30b06c387379293502b43e912350693e141ce814ef507abb007a4604f3ea73f94c691b".to_string(),
+        );
+
+        assert_eq!(
+            "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
+            signer
+        );
+    }
 }

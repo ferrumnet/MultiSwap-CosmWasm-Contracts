@@ -1,4 +1,4 @@
-use cosmwasm_std::{attr, Response, Uint128};
+use cosmwasm_std::{attr, Response};
 use cw_utils::Event;
 
 /// Tracks ownership transfer
