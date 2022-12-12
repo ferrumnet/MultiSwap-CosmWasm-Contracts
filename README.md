@@ -25,6 +25,20 @@ If you hit any issues there and want to debug, you can try to run the
 following in each contract dir:
 `RUSTFLAGS="-C link-arg=-s" cargo build --release --target=wasm32-unknown-unknown --locked`
 
+## Unit test
+
+To run overall tests:
+
+```
+cargo test
+```
+
+To run specific test:
+
+```
+cargo test <test-name>
+```
+
 ## Quality Control
 
 One of the basic metrics of assurance over code quality is how much is covered by

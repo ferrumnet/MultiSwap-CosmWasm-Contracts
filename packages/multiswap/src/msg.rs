@@ -47,3 +47,12 @@ pub enum MultiswapExecuteMsg {
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 pub struct MigrateMsg {}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+pub struct WithdrawSignMessage {
+    pub chain_id: String,
+    pub payee: String,
+    pub token: String,
+    pub amount: Uint128,
+    pub salt: String,
+}
