@@ -135,6 +135,7 @@ pub struct BridgeWithdrawSignedEvent<'a> {
     pub amount: Uint128,
     pub salt: &'a str,
     pub signature: &'a str,
+    pub signer: &'a str,
 }
 
 impl<'a> Event for BridgeWithdrawSignedEvent<'a> {
@@ -144,6 +145,7 @@ impl<'a> Event for BridgeWithdrawSignedEvent<'a> {
         rsp.attributes.push(attr("payee", self.payee));
         rsp.attributes.push(attr("token", self.token));
         rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes.push(attr("signer", self.signer));
         rsp.attributes.push(attr("salt", self.salt));
         rsp.attributes.push(attr("signature", self.signature));
     }
