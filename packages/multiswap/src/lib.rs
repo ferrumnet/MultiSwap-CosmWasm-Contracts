@@ -4,7 +4,7 @@ pub use crate::event::{
     TransferOwnershipEvent,
 };
 pub use crate::helpers::MultiswapContract;
-pub use crate::msg::{MigrateMsg, MultiswapExecuteMsg};
+pub use crate::msg::{MigrateMsg, MultiswapExecuteMsg, WithdrawSignMessage};
 pub use crate::query::{Liquidity, MultiswapQueryMsg};
 
 mod event;
