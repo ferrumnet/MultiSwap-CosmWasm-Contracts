@@ -15,7 +15,7 @@ use web3::signing::{keccak256, recover};
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS};
+use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
 use cw_utils::Event;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -314,11 +314,10 @@ pub fn execute_withdraw_signed(
         return Err(ContractError::Unauthorized {});
     }
 
-    // TODO: avoid using same signature and salt again
-    // if k.IsUsedMessage(ctx, messageBytes) {
-    //     return types.ErrAlreadyUsedWithdrawMessage(k.codespace)
-    // }
-
+    // avoid using same salt again
+    if !is_used_message(env.deps.storage, salt.to_string()) {
+        return Err(ContractError::UsedSalt {});
+    }
     let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
         to_address: payee.to_string(),
         amount: coins(amount.u128(), &token),
@@ -329,6 +328,9 @@ pub fn execute_withdraw_signed(
         env: _,
         info,
     } = env;
+
+    // put already used message to prevent double use
+    add_used_message(deps.storage, salt.to_string())?;
 
     let mut rsp = Response::new().add_message(bank_send_msg);
     let event = BridgeWithdrawSignedEvent {
@@ -529,6 +531,18 @@ pub fn read_signers(
             return "".to_string();
         })
         .collect::<Vec<String>>();
+}
+
+pub fn add_used_message(storage: &mut dyn Storage, salt: String) -> StdResult<Response> {
+    USED_MESSAGES.save(storage, salt.as_str(), &salt.to_string())?;
+    Ok(Response::default())
+}
+
+pub fn is_used_message(storage: &dyn Storage, salt: String) -> bool {
+    if let Ok(Some(_)) = USED_MESSAGES.may_load(storage, salt.as_str()) {
+        return true;
+    }
+    return false;
 }
 
 pub fn is_signer(storage: &dyn Storage, signer: String) -> bool {
