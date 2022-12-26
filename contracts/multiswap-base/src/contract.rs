@@ -11,12 +11,12 @@ use multiswap::{
     WithdrawSignMessage,
 };
 
-use web3::signing::{keccak256, recover};
-
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
 use cw_utils::Event;
+use sha3::{Digest, Keccak256};
+use std::convert::TryInto;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
@@ -301,6 +301,7 @@ pub fn execute_withdraw_signed(
 
     // gets signer from signature recovery
     let signer = get_signer(
+        env.deps.api,
         env.env.block.chain_id,
         payee.to_string(),
         token.to_string(),
@@ -386,20 +387,26 @@ pub fn execute_swap(
     Ok(rsp)
 }
 
-pub fn eth_message(message: String) -> [u8; 32] {
-    keccak256(
-        format!(
-            "{}{}{}",
-            "\x19Ethereum Signed Message:\n",
-            message.len(),
-            message
-        )
-        .as_bytes(),
-    )
+/// Returns a raw 20 byte Ethereum address
+pub fn ethereum_address_raw(pubkey: &[u8]) -> StdResult<[u8; 20]> {
+    let (tag, data) = match pubkey.split_first() {
+        Some(pair) => pair,
+        None => return Err(StdError::generic_err("Public key must not be empty")),
+    };
+    if *tag != 0x04 {
+        return Err(StdError::generic_err("Public key must start with 0x04"));
+    }
+    if data.len() != 64 {
+        return Err(StdError::generic_err("Public key must be 65 bytes long"));
+    }
+
+    let hash = Keccak256::digest(data);
+    Ok(hash[hash.len() - 20..].try_into().unwrap())
 }
 
 // get_signer calculate signer from withdraw signed message parameters
 pub fn get_signer(
+    api: &dyn Api,
     chain_id: String,
     payee: String,
     token: String,
@@ -423,17 +430,24 @@ pub fn get_signer(
         message = message_str.to_string()
     }
 
-    let message = eth_message(message);
+    let message = Keccak256::digest(
+        format!(
+            "{}{}{}",
+            "\x19Ethereum Signed Message:\n",
+            message.len(),
+            message
+        )
+        .as_bytes(),
+    );
     let signature = hex::decode(signature).unwrap();
 
-    let recovery_id = signature[64] as i32 - 27;
-    let pubkey = recover(&message, &signature[..64], recovery_id);
-    let pubkey = pubkey.unwrap();
-    let pubkey = format!("{:02X?}", pubkey);
-
-    // https://github.com/tomusdrw/rust-web3/issues/564
-    // https://crates.io/crates/ethsign
-    return pubkey;
+    let recovery_id = signature[64] - 27;
+    let calculated_pubkey = api
+        .secp256k1_recover_pubkey(&message, &signature[..64], recovery_id)
+        .unwrap();
+    let calculated_address = ethereum_address_raw(&calculated_pubkey).unwrap();
+    let address = format!("0x{}", hex::encode(calculated_address));
+    return address;
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -589,9 +603,7 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use cosmwasm_std::testing::{mock_env, mock_info};
-    use cosmwasm_std::{coins, from_binary, StdError};
+    use cosmwasm_std::testing::MockApi;
 
     #[test]
     fn test_get_signer() {
@@ -607,7 +619,9 @@ mod test {
         // console.log("signature", signature);
         // console.log("address", wallet.address);
 
+        let api = MockApi::default();
         let signer = get_signer(
+            &api,
             "chain_id".to_string(),
             "payee".to_string(),
             "token".to_string(),
