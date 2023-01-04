@@ -213,7 +213,7 @@ pub fn execute_add_liquidity(
     } = env;
 
     if !is_foundry_asset(deps.storage, token.to_string()) {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::NotFoundryAsset {});
     }
 
     let mut rsp = Response::default();
@@ -257,7 +257,7 @@ pub fn execute_remove_liquidity(
     } = env;
 
     if !is_foundry_asset(deps.storage, token.to_string()) {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::NotFoundryAsset {});
     }
 
     let mut rsp = Response::default();
@@ -294,7 +294,7 @@ pub fn execute_withdraw_signed(
     signature: String,
 ) -> Result<Response, ContractError> {
     if !is_foundry_asset(env.deps.storage, token.to_string()) {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::NotFoundryAsset {});
     }
 
     let payee_addr = env.deps.api.addr_validate(&payee)?;
@@ -312,7 +312,7 @@ pub fn execute_withdraw_signed(
 
     // ensure that the signer is registered on-chain
     if !is_signer(env.deps.storage, signer.to_string()) {
-        return Err(ContractError::Unauthorized {});
+        return Err(ContractError::InvalidSigner {});
     }
 
     // avoid using same salt again
