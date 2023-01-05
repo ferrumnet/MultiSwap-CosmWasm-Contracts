@@ -25,6 +25,16 @@ If you hit any issues there and want to debug, you can try to run the
 following in each contract dir:
 `RUSTFLAGS="-C link-arg=-s" cargo build --release --target=wasm32-unknown-unknown --locked`
 
+### Fix for "failed to fetch `https://github.com/rust-lang/crates.io-index`"
+
+https://github.com/rust-lang/cargo/issues/3381#issuecomment-308460530
+
+```
+eval `ssh-agent -s`
+ssh-add
+cargo build
+```
+
 ## Unit test
 
 To run overall tests:
