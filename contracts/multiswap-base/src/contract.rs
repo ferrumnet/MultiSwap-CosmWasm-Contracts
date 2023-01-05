@@ -316,7 +316,7 @@ pub fn execute_withdraw_signed(
     }
 
     // avoid using same salt again
-    if !is_used_message(env.deps.storage, salt.to_string()) {
+    if is_used_message(env.deps.storage, salt.to_string()) {
         return Err(ContractError::UsedSalt {});
     }
     let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
