@@ -23,6 +23,8 @@
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{"start_after":["acudos", "cudos1syysfe8ryh7ltnpqe9xvf59thdpyqp8x6aewxh"]}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"signers":{}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"signers":{"start_after":"0x1"}}'
+# cudos-noded query wasm contract-state smart $CONTRACT '{"foundry_assets":{"start_after":"a"}}'
+# cudos-noded query wasm contract-state smart $CONTRACT '{"foundry_assets":{}}'
 
 # cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
 # NEW_CODEID=2

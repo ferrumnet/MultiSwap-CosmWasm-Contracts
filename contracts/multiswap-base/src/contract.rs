@@ -482,7 +482,9 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
         MultiswapQueryMsg::Signers { start_after, limit } => {
             to_binary(&query_signers(deps, start_after, limit)?)
         }
-        MultiswapQueryMsg::FoundryAssets {} => to_binary(&query_foundry_assets(deps)?),
+        MultiswapQueryMsg::FoundryAssets { start_after, limit } => {
+            to_binary(&query_foundry_assets(deps, start_after, limit)?)
+        }
     }
 }
 
@@ -515,8 +517,17 @@ pub fn query_signers(
     Ok(read_signers(deps.storage, deps.api, start_after, limit))
 }
 
-pub fn query_foundry_assets(deps: Deps) -> StdResult<Vec<String>> {
-    Ok(read_foundry_assets(deps.storage, deps.api))
+pub fn query_foundry_assets(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<String>> {
+    Ok(read_foundry_assets(
+        deps.storage,
+        deps.api,
+        start_after,
+        limit,
+    ))
 }
 
 const MAX_LIMIT: u32 = 30;
@@ -596,15 +607,14 @@ pub fn is_signer(storage: &dyn Storage, signer: String) -> bool {
 pub fn read_foundry_assets(
     storage: &dyn Storage,
     api: &dyn Api,
-    // start_after: Option<(String, String)>,
-    // limit: Option<u32>,
+    start_after: Option<String>,
+    limit: Option<u32>,
 ) -> Vec<String> {
-    let limit = DEFAULT_LIMIT as usize;
-    // let start = calc_range_start(start_after);
-    // let start_key = start.map(Bound::exclusive);
+    let limit = limit.unwrap_or(DEFAULT_LIMIT) as usize;
+    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
 
     return FOUNDRY_ASSETS
-        .range(storage, None, None, Order::Ascending)
+        .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             if let Ok((_, it)) = item {

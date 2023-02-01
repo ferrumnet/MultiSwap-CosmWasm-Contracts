@@ -19,7 +19,10 @@ pub enum MultiswapQueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    FoundryAssets {},
+    FoundryAssets {
+        start_after: Option<String>,
+        limit: Option<u32>,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
