@@ -1,7 +1,8 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, from_binary, to_binary, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
-    MessageInfo, Order, Response, StdError, StdResult, Storage, Uint128,
+    coins, from_binary, to_binary, Addr, AllBalanceResponse, Api, BalanceResponse, BankMsg,
+    BankQuery, Binary, CosmosMsg, CustomQuery, Deps, DepsMut, Env, MessageInfo, Order,
+    QueryRequest, Response, StdError, StdResult, Storage, Uint128, WasmQuery,
 };
 
 use multiswap::{
@@ -11,13 +12,10 @@ use multiswap::{
     WithdrawSignMessage,
 };
 
-use cosmwasm_std::{
-    AllBalanceResponse, BalanceResponse, BankQuery, CustomQuery, QueryRequest, WasmQuery,
-};
-
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
 use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
+use cw_storage_plus::Bound;
 use cw_utils::Event;
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
@@ -477,9 +475,13 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
         MultiswapQueryMsg::Liquidity { owner, token } => {
             to_binary(&query_liquidity(deps, owner, token)?)
         }
-        MultiswapQueryMsg::AllLiquidity {} => to_binary(&query_all_liquidity(deps)?),
+        MultiswapQueryMsg::AllLiquidity { start_after, limit } => {
+            to_binary(&query_all_liquidity(deps, start_after, limit)?)
+        }
         MultiswapQueryMsg::Owner {} => to_binary(&query_owner(deps)?),
-        MultiswapQueryMsg::Signers {} => to_binary(&query_signers(deps)?),
+        MultiswapQueryMsg::Signers { start_after, limit } => {
+            to_binary(&query_signers(deps, start_after, limit)?)
+        }
         MultiswapQueryMsg::FoundryAssets {} => to_binary(&query_foundry_assets(deps)?),
     }
 }
@@ -497,15 +499,20 @@ pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Li
     return Err(StdError::generic_err("liquidity does not exist"));
 }
 
-pub fn query_all_liquidity(deps: Deps) -> StdResult<Vec<Liquidity>> {
-    // Ok(LIQUIDITIES.may_load(deps.storage)?.unwrap_or_default())
-    // Err(StdError::generic_err("not implemented yet"))
-    // let limit: u32 = 30;
-    return read_liquidities(deps.storage, deps.api);
+pub fn query_all_liquidity(
+    deps: Deps,
+    start_after: Option<(String, Addr)>,
+    limit: Option<u32>,
+) -> StdResult<Vec<Liquidity>> {
+    return read_liquidities(deps.storage, deps.api, start_after, limit);
 }
 
-pub fn query_signers(deps: Deps) -> StdResult<Vec<String>> {
-    Ok(read_signers(deps.storage, deps.api))
+pub fn query_signers(
+    deps: Deps,
+    start_after: Option<String>,
+    limit: Option<u32>,
+) -> StdResult<Vec<String>> {
+    Ok(read_signers(deps.storage, deps.api, start_after, limit))
 }
 
 pub fn query_foundry_assets(deps: Deps) -> StdResult<Vec<String>> {
@@ -517,15 +524,15 @@ const DEFAULT_LIMIT: u32 = 10;
 pub fn read_liquidities(
     storage: &dyn Storage,
     api: &dyn Api,
-    // start_after: Option<(String, String)>,
-    // limit: Option<u32>,
+    start_after: Option<(String, Addr)>,
+    limit: Option<u32>,
 ) -> StdResult<Vec<Liquidity>> {
-    let limit = DEFAULT_LIMIT as usize;
-    // let start = calc_range_start(start_after);
-    // let start_key = start.map(Bound::exclusive);
+    let limit = limit.unwrap_or(DEFAULT_LIMIT) as usize;
+    let start = calc_range_start(start_after);
+    let start_key = start.map(|s| Bound::ExclusiveRaw(s.into()));
 
     LIQUIDITIES
-        .range(storage, None, None, Order::Ascending)
+        .range(storage, start_key, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             let (_, v) = item?;
@@ -535,7 +542,7 @@ pub fn read_liquidities(
 }
 
 // this will set the first key after the provided key, by appending a 1 byte
-fn calc_range_start(start_after: Option<(String, String)>) -> Option<Vec<u8>> {
+fn calc_range_start(start_after: Option<(String, Addr)>) -> Option<Vec<u8>> {
     start_after.map(|info| {
         let mut v = [info.0.as_bytes(), info.1.as_bytes()]
             .concat()
@@ -549,15 +556,14 @@ fn calc_range_start(start_after: Option<(String, String)>) -> Option<Vec<u8>> {
 pub fn read_signers(
     storage: &dyn Storage,
     api: &dyn Api,
-    // start_after: Option<(String, String)>,
-    // limit: Option<u32>,
+    start_after: Option<String>,
+    limit: Option<u32>,
 ) -> Vec<String> {
-    let limit = DEFAULT_LIMIT as usize;
-    // let start = calc_range_start(start_after);
-    // let start_key = start.map(Bound::exclusive);
+    let limit = limit.unwrap_or(DEFAULT_LIMIT) as usize;
+    let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
 
     return SIGNERS
-        .range(storage, None, None, Order::Ascending)
+        .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
             if let Ok((_, it)) = item {
@@ -724,7 +730,7 @@ mod test {
             "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
         )
         .unwrap();
-        let signers: Vec<String> = query_signers(deps.as_ref()).unwrap();
+        let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 1);
         assert_eq!(
             signers[0],
@@ -740,7 +746,7 @@ mod test {
             "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
         )
         .unwrap();
-        let signers: Vec<String> = query_signers(deps.as_ref()).unwrap();
+        let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 0);
     }
 

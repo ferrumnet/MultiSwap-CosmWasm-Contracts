@@ -20,7 +20,9 @@
 
 # cudos-noded query wasm contract-state smart $CONTRACT '{"liquidity":{"owner":"'$VALIDATOR'","token":"stake"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{}}'
+# cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{"start_after":["acudos", "cudos1syysfe8ryh7ltnpqe9xvf59thdpyqp8x6aewxh"]}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"signers":{}}'
+# cudos-noded query wasm contract-state smart $CONTRACT '{"signers":{"start_after":"0x1"}}'
 
 # cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
 # NEW_CODEID=2
@@ -49,6 +51,7 @@ cudos-noded keys add cudosadmin2 --keyring-backend=test --recover
 "amused ethics frog april wall faith pull merge system off cost north wrist twice turn visit gun world lucky knee grain onion hope grief"
 
 # NODE=http://sentry1.gcp-uscentral1.cudos.org:26657
+# NODE=https://rpc.cudos.org:26657
 cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=cudosadmin --keyring-backend=test --chain-id=cudos-testnet-public-3 --node=$NODE --gas=auto --gas-adjustment=1.3 -y --fees=18758390000000000000acudos
 MULTISWAP_CODEID=63
 MULTISWAP_CODEID=81
