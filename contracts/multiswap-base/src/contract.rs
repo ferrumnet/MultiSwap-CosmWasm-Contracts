@@ -1,7 +1,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    coins, to_binary, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Order,
-    Response, StdError, StdResult, Storage, Uint128,
+    coins, from_binary, to_binary, Api, BankMsg, Binary, CosmosMsg, Deps, DepsMut, Env,
+    MessageInfo, Order, Response, StdError, StdResult, Storage, Uint128,
 };
 
 use multiswap::{
@@ -9,6 +9,10 @@ use multiswap::{
     BridgeWithdrawSignedEvent, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
     RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, TransferOwnershipEvent,
     WithdrawSignMessage,
+};
+
+use cosmwasm_std::{
+    AllBalanceResponse, BalanceResponse, BankQuery, CustomQuery, QueryRequest, WasmQuery,
 };
 
 use crate::error::ContractError;
@@ -216,6 +220,18 @@ pub fn execute_add_liquidity(
         return Err(ContractError::NotFoundryAsset {});
     }
 
+    // token deposit verification
+    let funds: Vec<cosmwasm_std::Coin> = info.clone().funds;
+    if funds.len() != 1 {
+        return Err(ContractError::InvalidDeposit {});
+    }
+    if funds[0].denom != token {
+        return Err(ContractError::InvalidDeposit {});
+    }
+    if funds[0].amount != amount {
+        return Err(ContractError::InvalidDeposit {});
+    }
+
     let mut rsp = Response::default();
     LIQUIDITIES.update(
         deps.storage,
@@ -260,7 +276,12 @@ pub fn execute_remove_liquidity(
         return Err(ContractError::NotFoundryAsset {});
     }
 
-    let mut rsp = Response::default();
+    let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
+        to_address: info.sender.to_string(),
+        amount: coins(amount.u128(), &token),
+    });
+    let mut rsp = Response::new().add_message(bank_send_msg);
+
     LIQUIDITIES.update(
         deps.storage,
         (token.as_str(), &info.sender),
@@ -603,7 +624,10 @@ pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, C
 #[cfg(test)]
 mod test {
     use super::*;
-    use cosmwasm_std::testing::MockApi;
+    use cosmwasm_std::testing::{
+        mock_dependencies, mock_env, mock_info, MockApi, MockQuerier, MockStorage,
+        MOCK_CONTRACT_ADDR,
+    };
 
     #[test]
     fn test_get_signer() {
@@ -634,5 +658,318 @@ mod test {
             "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
             signer
         );
+    }
+
+    #[test]
+    fn test_initialization() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("addr0000", &[]);
+        let res = instantiate(deps.as_mut(), env, info, msg).unwrap();
+
+        let owner = query_owner(deps.as_ref()).unwrap();
+        assert_eq!(
+            "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            owner
+        );
+    }
+
+    #[test]
+    fn test_ownership_transfer() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_ownership_transfer(
+            eenv,
+            "cudos1qu6xuvc3jy2m5wuk9nzvh4z57teq8j3p3q6huh".to_string(),
+        )
+        .unwrap();
+        let owner = query_owner(deps.as_ref()).unwrap();
+        assert_eq!(
+            "cudos1qu6xuvc3jy2m5wuk9nzvh4z57teq8j3p3q6huh".to_string(),
+            owner
+        );
+    }
+
+    #[test]
+    fn test_signer_add_remove() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_signer(
+            eenv,
+            "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
+        )
+        .unwrap();
+        let signers: Vec<String> = query_signers(deps.as_ref()).unwrap();
+        assert_eq!(signers.len(), 1);
+        assert_eq!(
+            signers[0],
+            "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
+        );
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_remove_signer(
+            eenv,
+            "0x035567da27e42258c35b313095acdea4320a7465".to_string(),
+        )
+        .unwrap();
+        let signers: Vec<String> = query_signers(deps.as_ref()).unwrap();
+        assert_eq!(signers.len(), 0);
+    }
+
+    #[test]
+    fn test_foundry_asset_add_remove() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
+        assert_eq!(signer_flag, true);
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_remove_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
+        assert_eq!(signer_flag, false);
+    }
+
+    #[test]
+    fn test_liquidity_add_remove() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
+        assert_eq!(signer_flag, true);
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+
+        let res =
+            execute_add_liquidity(eenv, "acudos".to_string(), Uint128::from(1000u128)).unwrap();
+        let liquidity = query_liquidity(
+            deps.as_ref(),
+            "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            "acudos".to_string(),
+        )
+        .unwrap();
+        assert_eq!(liquidity.token, "acudos".to_string());
+        assert_eq!(liquidity.amount, Uint128::from(1000u128));
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res =
+            execute_remove_liquidity(eenv, "acudos".to_string(), Uint128::from(500u128)).unwrap();
+        let liquidity = query_liquidity(
+            deps.as_ref(),
+            "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            "acudos".to_string(),
+        )
+        .unwrap();
+        assert_eq!(liquidity.token, "acudos".to_string());
+        assert_eq!(liquidity.amount, Uint128::from(500u128));
+
+        let res = deps
+            .querier
+            .handle_query(&QueryRequest::Bank(BankQuery::Balance {
+                address: MOCK_CONTRACT_ADDR.to_string(),
+                denom: "acudos".to_string(),
+            }))
+            .unwrap()
+            .unwrap();
+
+        let balance: BalanceResponse = from_binary(&res).unwrap();
+        assert_eq!(balance.amount.to_string(), "0acudos");
+    }
+
+    #[test]
+    fn test_used_message_add() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let used_msg: bool = is_used_message(deps.as_ref().storage, "0x03".to_string());
+        assert_eq!(used_msg, false);
+
+        let res = add_used_message(deps.as_mut().storage, "0x03".to_string()).unwrap();
+        let used_msg: bool = is_used_message(deps.as_ref().storage, "0x03".to_string());
+        assert_eq!(used_msg, true);
+    }
+
+    #[test]
+    fn test_execute_swap() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+
+        let res = execute_swap(
+            eenv,
+            "acudos".to_string(),
+            Uint128::from(1000u128),
+            "137".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+        )
+        .unwrap();
+
+        let res = deps
+            .querier
+            .handle_query(&QueryRequest::Bank(BankQuery::Balance {
+                address: MOCK_CONTRACT_ADDR.to_string(),
+                denom: "acudos".to_string(),
+            }))
+            .unwrap()
+            .unwrap();
+
+        let balance: BalanceResponse = from_binary(&res).unwrap();
+        assert_eq!(balance.amount.to_string(), "0acudos");
+    }
+
+    #[test]
+    fn test_execute_withdraw_signed() {
+        let mut deps = mock_dependencies();
+        let msg = InstantiateMsg {
+            owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+        };
+        let env = mock_env();
+        let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_signer(
+            eenv,
+            "0x759e2480ce80c97913e39f8b5ef67d29b975a431".to_string(),
+        )
+        .unwrap();
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+
+        let res = execute_withdraw_signed(
+            eenv,
+            "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            "acudos".to_string(),
+            Uint128::from(1000u128),
+            "0x00".to_string(),
+            "a112b6508d535f091b5de8877b34213aebca322c8a4edfbdb5002416343f30b06c387379293502b43e912350693e141ce814ef507abb007a4604f3ea73f94c691b".to_string(),
+        )
+        .unwrap();
+
+        let res = deps
+            .querier
+            .handle_query(&QueryRequest::Bank(BankQuery::Balance {
+                address: MOCK_CONTRACT_ADDR.to_string(),
+                denom: "acudos".to_string(),
+            }))
+            .unwrap()
+            .unwrap();
+
+        let balance: BalanceResponse = from_binary(&res).unwrap();
+        assert_eq!(balance.amount.to_string(), "0acudos");
     }
 }
