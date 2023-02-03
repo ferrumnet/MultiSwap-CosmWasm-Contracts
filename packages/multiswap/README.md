@@ -124,10 +124,10 @@ Messages are the transactions that can be accepted by the contract.
 Queries are utilized to get the state of the contract.
 
 - `Liquidity{ owner: String, token: String }` - returns liquidity of a token put by specific address.
-- `AllLiquidity{}` - returns overall liquidity put by all accounts.
+- `AllLiquidity{ start_after: Option<(String, Addr)>, limit: Option<u32> }` - returns overall liquidity put by all accounts where the response is paginated.
 - `Owner{}` - returns owner of the contract.
-- `Signers{}` - returns owner of the contract.
-- `FoundryAssets{}` - returns owner of the contract.
+- `Signers{ start_after: Option<String>, limit: Option<u32> }` - returns owner of the contract where the response is paginated.
+- `FoundryAssets{ start_after: Option<String>, limit: Option<u32> }` - returns owner of the contract where the response is paginated.
 
 ### Events
 

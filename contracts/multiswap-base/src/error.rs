@@ -9,6 +9,15 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("NotFoundryAsset")]
+    NotFoundryAsset {},
+
+    #[error("InvalidSigner")]
+    InvalidSigner,
+
+    #[error("UsedSalt")]
+    UsedSalt {},
+
     #[error("InvalidDeposit")]
     InvalidDeposit {},
 }
