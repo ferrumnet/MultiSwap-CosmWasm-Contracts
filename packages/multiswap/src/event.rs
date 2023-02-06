@@ -15,6 +15,22 @@ impl<'a> Event for TransferOwnershipEvent<'a> {
     }
 }
 
+/// Tracks fee additions
+pub struct SetFeeEvent<'a> {
+    pub from: &'a str,
+    pub token: &'a str,
+    pub amount: Uint128,
+}
+
+impl<'a> Event for SetFeeEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "add_signer"));
+        rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes.push(attr("token", self.token));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
 /// Tracks signer additions
 pub struct AddSignerEvent<'a> {
     pub from: &'a str,
