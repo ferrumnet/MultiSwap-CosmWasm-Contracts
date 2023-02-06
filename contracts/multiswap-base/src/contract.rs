@@ -7,14 +7,14 @@ use cosmwasm_std::{
 
 use multiswap::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
-    BridgeWithdrawSignedEvent, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
-    RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, TransferOwnershipEvent,
-    WithdrawSignMessage,
+    BridgeWithdrawSignedEvent, Fee, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
+    RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, SetFeeEvent,
+    TransferOwnershipEvent, WithdrawSignMessage,
 };
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use crate::state::{FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
+use crate::state::{FEE, FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
 use cw_storage_plus::Bound;
 use cw_utils::Event;
 use sha3::{Digest, Keccak256};
@@ -51,6 +51,7 @@ pub fn execute(
         MultiswapExecuteMsg::TransferOwnership { new_owner } => {
             execute_ownership_transfer(env, new_owner)
         }
+        MultiswapExecuteMsg::SetFee { token, amount } => execute_set_fee(env, token, amount),
         MultiswapExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
         MultiswapExecuteMsg::RemoveSigner { signer } => execute_remove_signer(env, signer),
         MultiswapExecuteMsg::AddFoundryAsset { token } => execute_add_foundry_asset(env, token),
@@ -106,6 +107,34 @@ pub fn execute_ownership_transfer(
         new_owner: new_owner.as_str(),
     };
     event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
+pub fn execute_set_fee(
+    env: ExecuteEnv,
+    token: String,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let ExecuteEnv {
+        mut deps,
+        env,
+        info,
+    } = env;
+
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut rsp = Response::default();
+    FEE.save(deps.storage, token.as_str(), &amount.clone())?;
+
+    let event = SetFeeEvent {
+        from: info.sender.as_str(),
+        token: token.as_str(),
+        amount: amount.clone(),
+    };
+    event.add_attributes(&mut rsp);
+
     Ok(rsp)
 }
 
@@ -485,12 +514,21 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
         MultiswapQueryMsg::FoundryAssets { start_after, limit } => {
             to_binary(&query_foundry_assets(deps, start_after, limit)?)
         }
+        MultiswapQueryMsg::Fee { token } => to_binary(&query_fee(deps, token)?),
     }
 }
 
 pub fn query_owner(deps: Deps) -> StdResult<String> {
     let owner = OWNER.load(deps.storage)?;
     return Ok(owner.to_string());
+}
+
+pub fn query_fee(deps: Deps, token: String) -> StdResult<Fee> {
+    let fee = FEE.load(deps.storage, token.as_str())?;
+    return Ok(Fee {
+        token: token.to_string(),
+        amount: fee,
+    });
 }
 
 pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Liquidity> {

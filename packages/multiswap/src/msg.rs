@@ -9,6 +9,10 @@ pub enum MultiswapExecuteMsg {
     TransferOwnership {
         new_owner: String,
     },
+    SetFee {
+        token: String,
+        amount: Uint128,
+    },
     AddSigner {
         signer: String,
     },
