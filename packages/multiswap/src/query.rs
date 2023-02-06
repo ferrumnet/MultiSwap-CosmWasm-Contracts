@@ -23,6 +23,7 @@ pub enum MultiswapQueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
+    Fee {},
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
@@ -40,4 +41,10 @@ impl Liquidity {
             amount: self.amount,
         })
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
+pub struct Fee {
+    pub token: String,
+    pub amount: Uint128,
 }
