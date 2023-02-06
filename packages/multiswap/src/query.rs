@@ -23,7 +23,9 @@ pub enum MultiswapQueryMsg {
         start_after: Option<String>,
         limit: Option<u32>,
     },
-    Fee {},
+    Fee {
+        token: String,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
