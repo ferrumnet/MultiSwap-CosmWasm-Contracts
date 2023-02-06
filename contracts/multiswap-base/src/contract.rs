@@ -126,13 +126,7 @@ pub fn execute_set_fee(
     }
 
     let mut rsp = Response::default();
-    FEE.save(
-        deps.storage,
-        &Fee {
-            token: token.to_string(),
-            amount: amount.clone(),
-        },
-    )?;
+    FEE.save(deps.storage, token.as_str(), &amount.clone())?;
 
     let event = SetFeeEvent {
         from: info.sender.as_str(),
@@ -520,7 +514,7 @@ pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary>
         MultiswapQueryMsg::FoundryAssets { start_after, limit } => {
             to_binary(&query_foundry_assets(deps, start_after, limit)?)
         }
-        MultiswapQueryMsg::Fee {} => to_binary(&query_fee(deps)?),
+        MultiswapQueryMsg::Fee { token } => to_binary(&query_fee(deps, token)?),
     }
 }
 
@@ -529,9 +523,12 @@ pub fn query_owner(deps: Deps) -> StdResult<String> {
     return Ok(owner.to_string());
 }
 
-pub fn query_fee(deps: Deps) -> StdResult<Fee> {
-    let fee = FEE.load(deps.storage)?;
-    return Ok(fee);
+pub fn query_fee(deps: Deps, token: String) -> StdResult<Fee> {
+    let fee = FEE.load(deps.storage, token.as_str())?;
+    return Ok(Fee {
+        token: token.to_string(),
+        amount: fee,
+    });
 }
 
 pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Liquidity> {

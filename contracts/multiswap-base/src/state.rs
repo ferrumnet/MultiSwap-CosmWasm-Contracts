@@ -1,11 +1,11 @@
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
-use multiswap::{Fee, Liquidity};
+use multiswap::Liquidity;
 
 /// Store the owner of the contract to add/remove signers
 pub const OWNER: Item<Addr> = Item::new("owner");
 /// Store fee configuration
-pub const FEE: Item<Fee> = Item::new("fee");
+pub const FEE: Map<&str, Uint128> = Map::new("fee");
 /// Store the liquidities map, `(owner, token) -> liquidity`
 pub const LIQUIDITIES: Map<(&str, &Addr), Liquidity> = Map::new("liquidities");
 /// Store signers.
