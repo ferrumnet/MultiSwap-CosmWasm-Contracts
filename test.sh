@@ -70,3 +70,33 @@ ROUTER=cudos1ejdmju9rx8fw2072uan4mh2uzmn3v50pxge6y8ardrne6y4l66cqx93x5d
 
 # send tokens from ADMIN to ADMIN2
 cudos-noded tx bank send cudosadmin cudos1qu6xuvc3jy2m5wuk9nzvh4z57teq8j3p3q6huh 1000000000000000000000acudos --node=$NODE --chain-id=cudos-testnet-public-3 --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test -y --fees=18758390000000000000acudos
+
+# multisig account setup
+cudos-noded keys add account1 --pubkey <account1-pubkey>
+cudos-noded keys add account2 --pubkey <account2-pubkey>
+
+# sign 2 out of 2
+cudos-noded keys add multisig --multisig account1,account2 --multisig-threshold 2
+
+# transfer balance to multisig account
+cudos-noded tx bank send 
+
+# multisig transaction compose
+cudos-noded tx bank send $(cudos-noded keys show multisig -a) cudos1qu6xuvc3jy2m5wuk9nzvh4z57teq8j3p3q6huh 10000000acudos  --generate-only --chain-id=test > multisigtx.json
+cudos-noded tx wasm migrate $CONTRACT $NEW_CODEID '{}' --from=$(cudos-noded keys show multisig -a) --chain-id=test --gas=auto --gas-adjustment=1.3 -y > multisigtx.json
+cudos-noded tx wasm execute $CONTRACT '{"add_foundry_asset":{"token":"stake"}}' --from=$(cudos-noded keys show multisig -a) --gas=auto --gas-adjustment=1.3 --chain-id=test --generate-only > multisigtx.json
+cudos-noded tx wasm execute $CONTRACT '{"remove_foundry_asset":{"token":"stake"}}' --from=$(cudos-noded keys show multisig -a) --gas=auto --gas-adjustment=1.3 --chain-id=test --generate-only > multisigtx.json
+cudos-noded tx wasm execute $CONTRACT '{"add_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=$(cudos-noded keys show multisig -a) --gas=auto --gas-adjustment=1.3 --chain-id=test --generate-only > multisigtx.json
+cudos-noded tx wasm execute $CONTRACT '{"remove_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=$(cudos-noded keys show multisig -a) --gas=auto --gas-adjustment=1.3 --chain-id=test --generate-only > multisigtx.json
+cudos-noded tx wasm execute $CONTRACT '{"transfer_ownership":{"new_owner":"cudos1nysrj2xxpm77xpkvglne0zcvnxuq0laacc7nrv"}}' --amount=1000stake --from=$(cudos-noded keys show multisig -a) --gas=auto --gas-adjustment=1.3 --chain-id=test --generate-only > multisigtx.json
+
+# signature from account1
+cudos-noded tx sign --from $(cudos-noded keys show -a account1) --multisig $(cudos-noded keys show -a multisig) multisigtx.json --sign-mode amino-json --chain-id=test >> multisigtx-signed-account1.json
+# signature from account2
+cudos-noded tx sign --from $(cudos-noded keys show -a account2) --multisig $(cudos-noded keys show -a multisig) multisigtx.json --sign-mode amino-json --chain-id=test >> multisigtx-signed-account2.json
+
+# Combine signatures into single transaction
+cudos-noded tx multisign --from multisig multisigtx.json multisig multisigtx-signed-account1.json multisigtx-signed-account2.json --chain-id=test > multisigtx-signed.json
+
+# Broadcast transaction
+cudos-noded tx broadcast multisigtx-signed.json --chain-id=test
