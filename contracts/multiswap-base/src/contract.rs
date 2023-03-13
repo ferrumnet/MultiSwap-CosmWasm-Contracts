@@ -423,6 +423,17 @@ pub fn execute_swap(
         return Err(ContractError::InvalidDeposit {});
     }
 
+    // transfer fee to owner account for distribution
+    let fee = FEE.load(deps.storage, &token)?;
+    if !fee.is_zero() {
+        let owner = OWNER.load(deps.storage)?;
+        let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
+            to_address: owner.to_string(),
+            amount: coins(fee.u128(), &token),
+        });
+        rsp = Response::new().add_message(bank_send_msg);
+    }
+
     let event = BridgeSwapEvent {
         from: info.sender.as_str(),
         token: token.as_str(),
@@ -430,6 +441,7 @@ pub fn execute_swap(
         target_chain_id: &target_chain_id,
         target_token: &target_token,
         target_address: &target_address,
+        fee: fee,
     };
     event.add_attributes(&mut rsp);
     Ok(rsp)

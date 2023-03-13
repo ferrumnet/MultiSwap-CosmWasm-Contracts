@@ -127,6 +127,7 @@ pub struct BridgeSwapEvent<'a> {
     pub target_chain_id: &'a str,
     pub target_token: &'a str,
     pub target_address: &'a str,
+    pub fee: Uint128,
 }
 
 impl<'a> Event for BridgeSwapEvent<'a> {
