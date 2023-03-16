@@ -17,6 +17,7 @@ use crate::msg::InstantiateMsg;
 use crate::state::{FEE, FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
 use cw_storage_plus::Bound;
 use cw_utils::Event;
+use regex::Regex;
 use sha3::{Digest, Keccak256};
 use std::convert::TryInto;
 
@@ -147,6 +148,11 @@ pub fn execute_add_signer(env: ExecuteEnv, signer: String) -> Result<Response, C
 
     if info.sender != OWNER.load(deps.storage)? {
         return Err(ContractError::Unauthorized {});
+    }
+
+    let re = Regex::new(r"^0x[a-f0-9]{40}$").unwrap();
+    if !re.is_match(signer.as_str()) {
+        return Err(ContractError::NotValidLowerCaseEthAddress {});
     }
 
     let mut rsp = Response::default();
@@ -432,6 +438,10 @@ pub fn execute_swap(
             amount: coins(fee.u128(), &token),
         });
         rsp = Response::new().add_message(bank_send_msg);
+    }
+
+    if amount <= fee {
+        return Err(ContractError::DepositLowerThanFee {});
     }
 
     let event = BridgeSwapEvent {
