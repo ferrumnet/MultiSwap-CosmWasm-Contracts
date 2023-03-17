@@ -20,4 +20,10 @@ pub enum ContractError {
 
     #[error("InvalidDeposit")]
     InvalidDeposit {},
+
+    #[error("NotValidLowerCaseEthAddress")]
+    NotValidLowerCaseEthAddress,
+
+    #[error("DepositLowerThanFee")]
+    DepositLowerThanFee,
 }

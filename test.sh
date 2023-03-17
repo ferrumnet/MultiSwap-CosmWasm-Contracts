@@ -17,6 +17,7 @@
 # cudos-noded tx wasm execute $CONTRACT '{"add_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"transfer_ownership":{"new_owner":"cudos1nysrj2xxpm77xpkvglne0zcvnxuq0laacc7nrv"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
+# cudos-noded tx wasm execute $CONTRACT '{"set_fee":{"token":"stake","amount":"1111"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
 
 # cudos-noded query wasm contract-state smart $CONTRACT '{"liquidity":{"owner":"'$VALIDATOR'","token":"stake"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{}}'
