@@ -14,6 +14,31 @@ MultiSwap is divided into three major parts
 
 At the contract initialization stage, contract owner is set. Here owner has permission to add/remove signer, add/remove foundry asset. Signers are the addresses that are generating signatures for withdrawals from the pool.
 
+### Data Types
+
+#### Liquidity
+
+`Liquidity` keeps the liquidity put by a single user per token.
+
+```rust
+pub struct Liquidity {
+    pub user: String,
+    pub token: String,
+    pub amount: Uint128,
+}
+```
+
+#### Fee
+
+`Fee` keeps the fee amount per token.
+
+```rust
+pub struct Fee {
+    pub token: String,
+    pub amount: Uint128,
+}
+```
+
 ### Messages
 
 Messages are the transactions that can be accepted by the contract.
