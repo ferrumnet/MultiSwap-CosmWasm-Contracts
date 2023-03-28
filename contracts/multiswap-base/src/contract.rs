@@ -840,7 +840,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
         assert_eq!(signer_flag, true);
         let eenv = ExecuteEnv {
@@ -868,7 +869,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
         assert_eq!(signer_flag, true);
         let eenv = ExecuteEnv {
@@ -965,7 +967,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
 
         let eenv = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1096,7 +1099,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let eenv = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
