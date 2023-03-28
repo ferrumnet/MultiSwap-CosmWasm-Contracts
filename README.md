@@ -1,5 +1,21 @@
 # MultiSwap CosmWasm Contracts
 
+## Contracts
+
+Ferrum cudos multiswap consists of `Multiswap` and `FiberRouter` contracts.
+
+### Multiswap
+
+`Multiswap` is a fund manager contract for cudos side fund management.
+
+[Spec](./packages/multiswap/README.md)
+
+### FiberRouter
+
+`FiberRouter` is the contract that users interact with for swap and withdrawal operations.
+
+[Spec](./packages/fiberrouter/README.md)
+
 ## Local build
 
 ```
