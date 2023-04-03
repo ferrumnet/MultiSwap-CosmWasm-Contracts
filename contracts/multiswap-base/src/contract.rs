@@ -430,7 +430,12 @@ pub fn execute_swap(
     }
 
     // transfer fee to owner account for distribution
-    let fee = FEE.load(deps.storage, &token)?;
+    let fee: Uint128;
+    match FEE.load(deps.storage, &token) {
+        Ok(val) => fee = val,
+        Err(_) => fee = Uint128::from(0u128),
+    }
+
     if !fee.is_zero() {
         let owner = OWNER.load(deps.storage)?;
         let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
@@ -835,7 +840,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
         assert_eq!(signer_flag, true);
         let eenv = ExecuteEnv {
@@ -863,7 +869,8 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let signer_flag: bool = is_foundry_asset(&deps.storage, "acudos".to_string());
         assert_eq!(signer_flag, true);
         let eenv = ExecuteEnv {
@@ -904,6 +911,15 @@ mod test {
         .unwrap();
         assert_eq!(liquidity.token, "acudos".to_string());
         assert_eq!(liquidity.amount, Uint128::from(500u128));
+
+        // removing liquidity more than the owned liquidity
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_remove_liquidity(eenv, "acudos".to_string(), Uint128::from(1500u128));
+        assert!(res.is_err());
 
         let res = deps
             .querier
@@ -951,7 +967,9 @@ mod test {
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
+
         let eenv = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
@@ -963,7 +981,6 @@ mod test {
                 }],
             ),
         };
-
         let res = execute_swap(
             eenv,
             "acudos".to_string(),
@@ -985,6 +1002,63 @@ mod test {
 
         let balance: BalanceResponse = from_binary(&res).unwrap();
         assert_eq!(balance.amount.to_string(), "0acudos");
+
+        // set fee and execute swap
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+        let res = execute_set_fee(eenv, "acudos".to_string(), Uint128::from(10u128));
+        assert_eq!(res.is_err(), false);
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+        let res = execute_swap(
+            eenv.into(),
+            "acudos".to_string(),
+            Uint128::from(1000u128),
+            "137".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+        );
+        assert_eq!(res.is_err(), false);
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym",
+                &[cosmwasm_std::Coin {
+                    denom: "acudos".to_string(),
+                    amount: Uint128::from(1000u128),
+                }],
+            ),
+        };
+        let res = execute_swap(
+            eenv,
+            "acudos".to_string(),
+            Uint128::from(10u128),
+            "137".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+            "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9".to_string(),
+        );
+        assert!(res.is_err());
     }
 
     #[test]
@@ -1008,12 +1082,25 @@ mod test {
         )
         .unwrap();
 
+        // try adding signer with uppercase letters
         let eenv = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
             info: info.clone(),
         };
-        let res = execute_add_foundry_asset(eenv, "acudos".to_string()).unwrap();
+        let res = execute_add_signer(
+            eenv,
+            "0x859e2480Ce80c97913e39F8b5EF67d29b975A431".to_string(),
+        );
+        assert!(res.is_err());
+
+        let eenv = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+        let res = execute_add_foundry_asset(eenv, "acudos".to_string());
+        assert_eq!(res.is_err(), false);
         let eenv = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
