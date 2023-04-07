@@ -83,7 +83,7 @@ can be valuable. And beyond that formal verification can provide even more assur
 
 ### Code Coverage
 
-I recommend the use of [tarpaulin](https://github.com/xd009642/tarpaulin): `cargo install cargo-tarpaulin`
+[tarpaulin](https://github.com/xd009642/tarpaulin): `cargo install cargo-tarpaulin`
 
 To get some nice interactive charts, you can go to the root directory and run:
 
@@ -97,3 +97,40 @@ analyze this package, which gives much faster turn-around:
 
 Note that it will produce a code coverage report for the entire project, but only the coverage in that
 package is the real value. If does give quick feedback for you if you unit test writing was successful.
+
+**Commands:**
+
+```
+cargo install cargo-tarpaulin
+
+# this print out info on all files in all crates
+cargo tarpaulin -v
+
+# this still covers all crates (how to disable workspace?) but also shows html overview
+cargo tarpaulin -v --lib -o html
+open tarpaulin-report.html
+
+# this seems to run tests in each crate one after another and get better coverage for all packages
+cargo tarpaulin -v --lib --workspace -o html
+open tarpaulin-report.html
+```
+
+**Result of coverage check:**
+
+```
+|| Uncovered Lines:
+|| contracts/fiberrouter-base/src/contract.rs: 17, 23, 25-26, 28-29, 40, 46-49, 51, 53-58, 60-64, 66-71, 76, 80-81, 84-85, 88-89, 92-93, 95-96, 99-101, 104-105, 108-109, 112-113, 115-116, 119, 127-129, 132, 134-140, 142, 145-146, 148-151, 154, 162-164, 166, 168-174, 176, 179-180, 182-187, 191-194, 198-200, 203-205, 209-210
+|| contracts/multiswap-base/src/contract.rs: 45, 51-54, 56-61, 63-64, 66-67, 70-75, 77-81, 83-88, 102, 128, 152, 179, 204, 229, 255, 261, 264, 267, 277-279, 311, 331, 353, 373, 378, 427, 430, 453, 473, 476, 479, 533-536, 538-539, 541-543, 545-546, 548, 557-561, 571, 574, 579, 590, 595-599, 605, 611-613, 615-620, 626-633, 653, 674, 677, 683-684, 686-691, 693, 695, 706-707
+|| packages/fiberrouter/src/event.rs: 11-14, 25-28
+|| packages/multiswap/src/helpers.rs: 14-15, 18, 23-27, 29
+|| packages/multiswap/src/query.rs: 39-43
+|| Tested/Total Lines:
+|| contracts/fiberrouter-base/src/contract.rs: 0/103 +0.00%
+|| contracts/multiswap-base/src/contract.rs: 253/368 +0.00%
+|| packages/fiberrouter/src/event.rs: 0/8 +0.00%
+|| packages/multiswap/src/event.rs: 54/54 +0.00%
+|| packages/multiswap/src/helpers.rs: 0/9 +0.00%
+|| packages/multiswap/src/query.rs: 0/5 +0.00%
+||
+56.12% coverage, 307/547 lines covered, +0.00% change in coverage
+```
