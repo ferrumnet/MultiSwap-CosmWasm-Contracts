@@ -30,18 +30,17 @@ pub fn instantiate(
 /// To mitigate clippy::too_many_arguments warning
 pub struct ExecuteEnv<'a> {
     deps: DepsMut<'a>,
-    env: Env,
     info: MessageInfo,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    env: Env,
+    _: Env,
     info: MessageInfo,
     msg: FiberRouterExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let env = ExecuteEnv { deps, env, info };
+    let env = ExecuteEnv { deps, info };
     match msg {
         FiberRouterExecuteMsg::TransferOwnership { new_owner } => {
             execute_ownership_transfer(env, new_owner)
@@ -75,7 +74,7 @@ pub fn execute_ownership_transfer(
     env: ExecuteEnv,
     new_owner: String,
 ) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let new_owner_addr = deps.api.addr_validate(&new_owner)?;
 
     if info.sender != OWNER.load(deps.storage)? {
@@ -94,7 +93,7 @@ pub fn execute_ownership_transfer(
 }
 
 pub fn execute_set_pool(env: ExecuteEnv, new_pool: String) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let new_pool_addr = deps.api.addr_validate(&new_pool)?;
 
     if info.sender != OWNER.load(deps.storage)? {
@@ -128,11 +127,11 @@ pub fn execute_withdraw_signed(
     // Call multiswap withdraw signed
     let msg = multiswap.call(
         MultiswapExecuteMsg::WithdrawSigned {
-            payee: payee.to_string(),
-            token: token.to_string(),
-            amount: amount.clone(),
-            salt: salt.to_string(),
-            signature: signature.to_string(),
+            payee: payee,
+            token: token,
+            amount: amount,
+            salt: salt,
+            signature: signature,
         },
         vec![],
     )?;
@@ -140,9 +139,9 @@ pub fn execute_withdraw_signed(
     let res = Response::new()
         .add_message(msg)
         .add_attribute("action", "withdraw_signed")
-        .add_attribute("payee", payee.to_string())
-        .add_attribute("token", token.to_string())
-        .add_attribute("amount", amount.to_string());
+        .add_attribute("payee", payee)
+        .add_attribute("token", token)
+        .add_attribute("amount", amount);
     Ok(res)
 }
 
@@ -154,7 +153,7 @@ pub fn execute_swap(
     target_token: String,
     target_address: String,
 ) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
     // MultiswapContract is a function helper that provides several queries and message builder.
@@ -162,11 +161,9 @@ pub fn execute_swap(
     // Call multiswap swap
     let msg = multiswap.call(
         MultiswapExecuteMsg::Swap {
-            token: token.to_string(),
-            amount: amount.clone(),
-            target_chain_id: target_chain_id.to_string(),
-            target_token: target_token.to_string(),
-            target_address: target_address.to_string(),
+            target_chain_id: target_chain_id,
+            target_token: target_token,
+            target_address: target_address,
         },
         info.funds,
     )?;
@@ -174,11 +171,11 @@ pub fn execute_swap(
     let res = Response::new()
         .add_message(msg)
         .add_attribute("action", "swap")
-        .add_attribute("token", token.to_string())
-        .add_attribute("amount", amount.to_string())
-        .add_attribute("target_chain_id", target_chain_id.to_string())
-        .add_attribute("target_token", target_token.to_string())
-        .add_attribute("target_address", target_address.to_string());
+        .add_attribute("token", token)
+        .add_attribute("amount", amount)
+        .add_attribute("target_chain_id", target_chain_id)
+        .add_attribute("target_token", target_token)
+        .add_attribute("target_address", target_address);
     Ok(res)
 }
 
@@ -201,6 +198,6 @@ pub fn query_pool(deps: Deps) -> StdResult<String> {
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(_: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Response::default())
 }

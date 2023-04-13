@@ -19,7 +19,7 @@ impl<'a> Event for TransferOwnershipEvent<'a> {
 pub struct SetFeeEvent<'a> {
     pub from: &'a str,
     pub token: &'a str,
-    pub amount: Uint128,
+    pub fee: Uint128,
 }
 
 impl<'a> Event for SetFeeEvent<'a> {
@@ -127,7 +127,7 @@ pub struct BridgeSwapEvent<'a> {
     pub target_chain_id: &'a str,
     pub target_token: &'a str,
     pub target_address: &'a str,
-    pub fee: Uint128,
+    pub fee_amount: Uint128,
 }
 
 impl<'a> Event for BridgeSwapEvent<'a> {

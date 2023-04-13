@@ -11,7 +11,7 @@ pub enum MultiswapExecuteMsg {
     },
     SetFee {
         token: String,
-        amount: Uint128,
+        fee: Uint128,
     },
     AddSigner {
         signer: String,
@@ -25,10 +25,7 @@ pub enum MultiswapExecuteMsg {
     RemoveFoundryAsset {
         token: String,
     },
-    AddLiquidity {
-        token: String,
-        amount: Uint128,
-    },
+    AddLiquidity {},
     RemoveLiquidity {
         token: String,
         amount: Uint128,
@@ -41,8 +38,6 @@ pub enum MultiswapExecuteMsg {
         signature: String,
     },
     Swap {
-        token: String,
-        amount: Uint128,
         target_chain_id: String,
         target_token: String,
         target_address: String,

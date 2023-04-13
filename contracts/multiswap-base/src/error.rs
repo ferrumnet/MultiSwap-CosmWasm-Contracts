@@ -24,6 +24,15 @@ pub enum ContractError {
     #[error("NotValidLowerCaseEthAddress")]
     NotValidLowerCaseEthAddress,
 
-    #[error("DepositLowerThanFee")]
-    DepositLowerThanFee,
+    #[error("InvalidFeeRange")]
+    InvalidFeeRange,
+
+    #[error("InvalidTargetInfo")]
+    InvalidTargetInfo,
+
+    #[error("InvalidToken")]
+    InvalidToken,
+
+    #[error("InvalidAmount")]
+    InvalidAmount,
 }
