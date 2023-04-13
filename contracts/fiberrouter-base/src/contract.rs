@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use fiberrouter::{
     FiberRouterExecuteMsg, FiberRouterQueryMsg, MigrateMsg, SetPoolEvent, TransferOwnershipEvent,
 };
-use multiswap::{MultiswapContract, MultiswapExecuteMsg};
+use fundmanager::{FundManagerContract, FundManagerExecuteMsg};
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
@@ -122,13 +122,13 @@ pub fn execute_withdraw_signed(
     let deps = env.deps;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
-    // MultiswapContract is a function helper that provides several queries and message builder.
-    let multiswap = MultiswapContract(contract_addr);
-    // Call multiswap withdraw signed
-    let msg = multiswap.call(
-        MultiswapExecuteMsg::WithdrawSigned {
-            payee: payee,
-            token: token,
+    // FundManagerContract is a function helper that provides several queries and message builder.
+    let fundmanager = FundManagerContract(contract_addr);
+    // Call fundmanager withdraw signed
+    let msg = fundmanager.call(
+        FundManagerExecuteMsg::WithdrawSigned {
+            payee: payee.to_string(),
+            token: token.to_string(),
             amount: amount,
             salt: salt,
             signature: signature,
@@ -156,14 +156,14 @@ pub fn execute_swap(
     let ExecuteEnv { deps, info } = env;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
-    // MultiswapContract is a function helper that provides several queries and message builder.
-    let multiswap = MultiswapContract(contract_addr);
-    // Call multiswap swap
-    let msg = multiswap.call(
-        MultiswapExecuteMsg::Swap {
-            target_chain_id: target_chain_id,
-            target_token: target_token,
-            target_address: target_address,
+    // FundManagerContract is a function helper that provides several queries and message builder.
+    let fundmanager = FundManagerContract(contract_addr);
+    // Call fundmanager swap
+    let msg = fundmanager.call(
+        FundManagerExecuteMsg::Swap {
+            target_chain_id: target_chain_id.to_string(),
+            target_token: target_token.to_string(),
+            target_address: target_address.to_string(),
         },
         info.funds,
     )?;

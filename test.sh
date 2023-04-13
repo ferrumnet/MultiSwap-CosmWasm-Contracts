@@ -2,11 +2,11 @@
 
 # NODE=http://localhost:26657
 # VALIDATOR=$(cudos-noded keys show -a validator --keyring-backend=test)
-# cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
+# cudos-noded tx wasm store cw-plus/fundmanager_base.wasm --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
 # deploy with admin upgradeable
-# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumMultiswap" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$VALIDATOR -y
+# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$VALIDATOR -y
 # deploy without admin
-# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumMultiswap" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --no-admin -y
+# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --no-admin -y
 # CONTRACT=cudos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9strccpl
 # cudos-noded tx wasm execute $CONTRACT '{"add_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
@@ -27,7 +27,7 @@
 # cudos-noded query wasm contract-state smart $CONTRACT '{"foundry_assets":{"start_after":"a"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"foundry_assets":{}}'
 
-# cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
+# cudos-noded tx wasm store cw-plus/fundmanager_base.wasm --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
 # NEW_CODEID=2
 # cudos-noded tx wasm migrate $CONTRACT $NEW_CODEID '{}' --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
 
@@ -55,17 +55,17 @@ cudos-noded keys add cudosadmin2 --keyring-backend=test --recover
 
 # NODE=http://sentry1.gcp-uscentral1.cudos.org:26657
 # NODE=https://rpc.cudos.org:26657
-cudos-noded tx wasm store cw-plus/multiswap_base.wasm --from=cudosadmin --keyring-backend=test --chain-id=cudos-testnet-public-3 --node=$NODE --gas=auto --gas-adjustment=1.3 -y --fees=18758390000000000000acudos
-MULTISWAP_CODEID=63
-MULTISWAP_CODEID=81
-cudos-noded tx wasm instantiate $MULTISWAP_CODEID '{"owner":"'$ADMIN'"}' --from=cudosadmin --label "FerrumMultiswap" --node=$NODE --chain-id=cudos-testnet-public-3 --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$ADMIN -y --fees=18758390000000000000acudos
-MULTISWAP=cudos1rqppygyqm358hj4fx0s2warcaa0h7y95jxdwyqwjamekap7f5m7qwex8va
-MULTISWAP=cudos15w3pznjstqxe35wghccdw6qgqwxce4j85uwvaaqmk9r7qtjamdhs0262qk
+cudos-noded tx wasm store cw-plus/fundmanager_base.wasm --from=cudosadmin --keyring-backend=test --chain-id=cudos-testnet-public-3 --node=$NODE --gas=auto --gas-adjustment=1.3 -y --fees=18758390000000000000acudos
+FUND_MANAGER_CODEID=63
+FUND_MANAGER_CODEID=81
+cudos-noded tx wasm instantiate $FUND_MANAGER_CODEID '{"owner":"'$ADMIN'"}' --from=cudosadmin --label "FerrumFundManager" --node=$NODE --chain-id=cudos-testnet-public-3 --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$ADMIN -y --fees=18758390000000000000acudos
+FUND_MANAGER=cudos1rqppygyqm358hj4fx0s2warcaa0h7y95jxdwyqwjamekap7f5m7qwex8va
+FUND_MANAGER=cudos15w3pznjstqxe35wghccdw6qgqwxce4j85uwvaaqmk9r7qtjamdhs0262qk
 
 cudos-noded tx wasm store cw-plus/fiberrouter_base.wasm --from=cudosadmin --keyring-backend=test --chain-id=cudos-testnet-public-3 --node=$NODE --gas=auto --gas-adjustment=1.3 -y --fees=18758390000000000000acudos
 ROUTER_CODEID=64
 ROUTER_CODEID=82
-cudos-noded tx wasm instantiate $ROUTER_CODEID '{"owner":"'$ADMIN'","pool":"'$MULTISWAP'"}' --from=cudosadmin --label "FerrumFiberRouter" --node=$NODE --chain-id=cudos-testnet-public-3 --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$ADMIN -y --fees=18758390000000000000acudos
+cudos-noded tx wasm instantiate $ROUTER_CODEID '{"owner":"'$ADMIN'","pool":"'$FUND_MANAGER'"}' --from=cudosadmin --label "FerrumFiberRouter" --node=$NODE --chain-id=cudos-testnet-public-3 --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$ADMIN -y --fees=18758390000000000000acudos
 ROUTER=cudos19rwu6mnumphfkawsdgwra62a7a730gf5gckgxrh4r5acv6hggpwqkvkusk
 ROUTER=cudos1ejdmju9rx8fw2072uan4mh2uzmn3v50pxge6y8ardrne6y4l66cqx93x5d
 

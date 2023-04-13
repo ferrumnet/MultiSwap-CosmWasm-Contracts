@@ -1,11 +1,11 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::{Addr, Api, StdResult, Uint128};
+use cosmwasm_std::{Addr, StdResult, Uint128};
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, JsonSchema, Debug)]
 #[serde(rename_all = "snake_case")]
-pub enum MultiswapQueryMsg {
+pub enum FundManagerQueryMsg {
     Liquidity {
         owner: String,
         token: String,
@@ -36,7 +36,7 @@ pub struct Liquidity {
 }
 
 impl Liquidity {
-    pub fn to_normal(&self, api: &dyn Api) -> StdResult<Liquidity> {
+    pub fn to_normal(&self) -> StdResult<Liquidity> {
         Ok(Liquidity {
             user: self.user.to_string(),
             token: self.token.to_string(),

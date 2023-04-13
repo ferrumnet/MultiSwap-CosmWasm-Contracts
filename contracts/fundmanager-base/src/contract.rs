@@ -4,10 +4,10 @@ use cosmwasm_std::{
     Order, Response, StdError, StdResult, Storage, Uint128,
 };
 
-use multiswap::{
+use fundmanager::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
-    BridgeWithdrawSignedEvent, Fee, Liquidity, MigrateMsg, MultiswapExecuteMsg, MultiswapQueryMsg,
-    RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, SetFeeEvent,
+    BridgeWithdrawSignedEvent, Fee, FundManagerExecuteMsg, FundManagerQueryMsg, Liquidity,
+    MigrateMsg, RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, SetFeeEvent,
     TransferOwnershipEvent, WithdrawSignMessage,
 };
 
@@ -44,32 +44,32 @@ pub fn execute(
     deps: DepsMut,
     env: Env,
     info: MessageInfo,
-    msg: MultiswapExecuteMsg,
+    msg: FundManagerExecuteMsg,
 ) -> Result<Response, ContractError> {
     let env = ExecuteEnv { deps, env, info };
     match msg {
-        MultiswapExecuteMsg::TransferOwnership { new_owner } => {
+        FundManagerExecuteMsg::TransferOwnership { new_owner } => {
             execute_ownership_transfer(env, new_owner)
         }
-        MultiswapExecuteMsg::SetFee { token, fee } => execute_set_fee(env, token, fee),
-        MultiswapExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
-        MultiswapExecuteMsg::RemoveSigner { signer } => execute_remove_signer(env, signer),
-        MultiswapExecuteMsg::AddFoundryAsset { token } => execute_add_foundry_asset(env, token),
-        MultiswapExecuteMsg::RemoveFoundryAsset { token } => {
+        FundManagerExecuteMsg::SetFee { token, fee } => execute_set_fee(env, token, fee),
+        FundManagerExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
+        FundManagerExecuteMsg::RemoveSigner { signer } => execute_remove_signer(env, signer),
+        FundManagerExecuteMsg::AddFoundryAsset { token } => execute_add_foundry_asset(env, token),
+        FundManagerExecuteMsg::RemoveFoundryAsset { token } => {
             execute_remove_foundry_asset(env, token)
         }
-        MultiswapExecuteMsg::AddLiquidity {} => execute_add_liquidity(env),
-        MultiswapExecuteMsg::RemoveLiquidity { token, amount } => {
+        FundManagerExecuteMsg::AddLiquidity {} => execute_add_liquidity(env),
+        FundManagerExecuteMsg::RemoveLiquidity { token, amount } => {
             execute_remove_liquidity(env, token, amount)
         }
-        MultiswapExecuteMsg::WithdrawSigned {
+        FundManagerExecuteMsg::WithdrawSigned {
             payee,
             token,
             amount,
             salt,
             signature,
         } => execute_withdraw_signed(env, payee, token, amount, salt, signature),
-        MultiswapExecuteMsg::Swap {
+        FundManagerExecuteMsg::Swap {
             target_chain_id,
             target_token,
             target_address,
@@ -254,7 +254,7 @@ pub fn execute_add_liquidity(env: ExecuteEnv) -> Result<Response, ContractError>
         (token.as_str(), &info.sender),
         |liquidity: Option<Liquidity>| -> StdResult<_> {
             if let Some(unwrapped) = liquidity {
-                Ok(Liquidity {
+                return Ok(Liquidity {
                     user: info.sender.to_string(),
                     token: token.to_string(),
                     amount: unwrapped.amount.checked_add(amount)?,
@@ -306,7 +306,7 @@ pub fn execute_remove_liquidity(
         (token.as_str(), &info.sender),
         |liquidity: Option<Liquidity>| -> StdResult<_> {
             if let Some(unwrapped) = liquidity {
-                Ok(Liquidity {
+                return Ok(Liquidity {
                     user: info.sender.to_string(),
                     token: token.to_string(),
                     amount: unwrapped.amount.checked_sub(amount)?,
@@ -509,22 +509,22 @@ pub fn get_signer(
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn query(deps: Deps, _env: Env, msg: MultiswapQueryMsg) -> StdResult<Binary> {
+pub fn query(deps: Deps, _env: Env, msg: FundManagerQueryMsg) -> StdResult<Binary> {
     match msg {
-        MultiswapQueryMsg::Liquidity { owner, token } => {
+        FundManagerQueryMsg::Liquidity { owner, token } => {
             to_binary(&query_liquidity(deps, owner, token)?)
         }
-        MultiswapQueryMsg::AllLiquidity { start_after, limit } => {
+        FundManagerQueryMsg::AllLiquidity { start_after, limit } => {
             to_binary(&query_all_liquidity(deps, start_after, limit)?)
         }
-        MultiswapQueryMsg::Owner {} => to_binary(&query_owner(deps)?),
-        MultiswapQueryMsg::Signers { start_after, limit } => {
+        FundManagerQueryMsg::Owner {} => to_binary(&query_owner(deps)?),
+        FundManagerQueryMsg::Signers { start_after, limit } => {
             to_binary(&query_signers(deps, start_after, limit)?)
         }
-        MultiswapQueryMsg::FoundryAssets { start_after, limit } => {
+        FundManagerQueryMsg::FoundryAssets { start_after, limit } => {
             to_binary(&query_foundry_assets(deps, start_after, limit)?)
         }
-        MultiswapQueryMsg::Fee { token } => to_binary(&query_fee(deps, token)?),
+        FundManagerQueryMsg::Fee { token } => to_binary(&query_fee(deps, token)?),
     }
 }
 
@@ -576,7 +576,7 @@ pub fn query_foundry_assets(
 const DEFAULT_LIMIT: u32 = 10;
 pub fn read_liquidities(
     storage: &dyn Storage,
-    api: &dyn Api,
+    _: &dyn Api,
     start_after: Option<(String, Addr)>,
     limit: Option<u32>,
 ) -> StdResult<Vec<Liquidity>> {
@@ -589,7 +589,7 @@ pub fn read_liquidities(
         .take(limit)
         .map(|item| {
             let (_, v) = item?;
-            v.to_normal(api)
+            v.to_normal()
         })
         .collect::<StdResult<Vec<Liquidity>>>()
 }
