@@ -54,19 +54,10 @@ pub fn execute(
             signature,
         } => execute_withdraw_signed(env, payee, token, amount, salt, signature),
         FiberRouterExecuteMsg::Swap {
-            token,
-            amount,
             target_chain_id,
             target_token,
             target_address,
-        } => execute_swap(
-            env,
-            token,
-            amount,
-            target_chain_id,
-            target_token,
-            target_address,
-        ),
+        } => execute_swap(env, target_chain_id, target_token, target_address),
     }
 }
 
@@ -147,8 +138,6 @@ pub fn execute_withdraw_signed(
 
 pub fn execute_swap(
     env: ExecuteEnv,
-    token: String,
-    amount: Uint128,
     target_chain_id: String,
     target_token: String,
     target_address: String,
@@ -171,8 +160,6 @@ pub fn execute_swap(
     let res = Response::new()
         .add_message(msg)
         .add_attribute("action", "swap")
-        .add_attribute("token", token)
-        .add_attribute("amount", amount)
         .add_attribute("target_chain_id", target_chain_id)
         .add_attribute("target_token", target_token)
         .add_attribute("target_address", target_address);

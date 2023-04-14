@@ -13,8 +13,6 @@ pub enum FiberRouterExecuteMsg {
         pool: String,
     },
     Swap {
-        token: String,
-        amount: Uint128,
         target_chain_id: String,
         target_token: String,
         target_address: String,

@@ -10,14 +10,14 @@
 # CONTRACT=cudos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9strccpl
 # cudos-noded tx wasm execute $CONTRACT '{"add_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
-# cudos-noded tx wasm execute $CONTRACT '{"add_liquidity":{"token":"stake","amount": "1000000"}}' --amount=1000000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
+# cudos-noded tx wasm execute $CONTRACT '{"add_liquidity":{}}' --amount=1000000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_liquidity":{"token":"stake","amount": "100000"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"withdraw_signed":{"payee":"'$VALIDATOR'","token":"stake","amount":"1000","salt":"0x00","signature":"251fa6ca91ade4b0c76712bc8c6fec07d91c0b7466e3f082cbd3cad917c9d9b008832149f8f97adfc20be042bcdc6598a1bebb23a25e30bd5c58db086da18af91b"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
-# cudos-noded tx wasm execute $CONTRACT '{"swap":{"token":"stake","amount":"1000","target_chain_id":"0x00","target_token":"0x00","target_address":"0x00"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
+# cudos-noded tx wasm execute $CONTRACT '{"swap":{"target_chain_id":"0x00","target_token":"0x00","target_address":"0x00"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"add_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"transfer_ownership":{"new_owner":"cudos1nysrj2xxpm77xpkvglne0zcvnxuq0laacc7nrv"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
-# cudos-noded tx wasm execute $CONTRACT '{"set_fee":{"token":"stake","amount":"1111"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
+# cudos-noded tx wasm execute $CONTRACT '{"set_fee":{"token":"stake","fee":"800"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
 
 # cudos-noded query wasm contract-state smart $CONTRACT '{"liquidity":{"owner":"'$VALIDATOR'","token":"stake"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{}}'
@@ -38,10 +38,11 @@
 # cudos-noded tx wasm store cw-plus/fiberrouter_base.wasm --from=validator --keyring-backend=test --chain-id=test --node=$NODE --gas=auto --gas-adjustment=1.3 -y
 # instantiate the contract
 # cudos-noded tx wasm instantiate 2 '{"owner":"'$VALIDATOR'","pool":"'$CONTRACT'"}' --from=validator --label "FerrumFiberRouter" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$VALIDATOR -y
-# FIBER_ROUTER=cudos1nc5tatafv6eyq7llkr2gv50ff9e22mnf70qgjlv737ktmt4eswrq8ka6re
+# FIBER_ROUTER=cudos1zwv6feuzhy6a9wekh96cd57lsarmqlwxdypdsplw6zhfncqw6ftqlnfp2z
 # cudos-noded tx wasm execute $FIBER_ROUTER '{"set_pool":{"pool":"'$CONTRACT'"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $FIBER_ROUTER '{"withdraw_signed":{"payee":"'$VALIDATOR'","token":"stake","amount":"1000","salt":"0x00","signature":"0x00"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
-# cudos-noded tx wasm execute $FIBER_ROUTER '{"swap":{"token":"stake","amount":"1000","target_chain_id":"0x00","target_token":"0x00","target_address":"0x00"}}' --amount=1000stake  --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
+# cudos-noded tx wasm execute $FIBER_ROUTER '{"swap":{"target_chain_id":"0x00","target_token":"0x00","target_address":"0x00"}}' --amount=1000stake  --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
+# cudos-noded query wasm contract-state smart $FIBER_ROUTER '{"pool":{}}'
 # cudos-noded query bank balances $FIBER_ROUTER
 # cudos-noded query bank balances $CONTRACT
 
