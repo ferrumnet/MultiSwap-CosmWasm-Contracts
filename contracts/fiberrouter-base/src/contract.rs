@@ -176,12 +176,12 @@ pub fn query(deps: Deps, _env: Env, msg: FiberRouterQueryMsg) -> StdResult<Binar
 
 pub fn query_owner(deps: Deps) -> StdResult<String> {
     let owner = OWNER.load(deps.storage)?;
-    return Ok(owner.to_string());
+    Ok(owner.to_string())
 }
 
 pub fn query_pool(deps: Deps) -> StdResult<String> {
     let pool = POOL.load(deps.storage)?;
-    return Ok(pool.to_string());
+    Ok(pool.to_string())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

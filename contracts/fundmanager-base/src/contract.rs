@@ -104,7 +104,7 @@ pub fn execute_set_fee(
     token: String,
     fee: Uint128,
 ) -> Result<Response, ContractError> {
-    if token == "" {
+    if token.is_empty() {
         return Err(ContractError::InvalidToken {});
     }
     // fee should be lower than 90%
@@ -180,7 +180,7 @@ pub fn execute_add_foundry_asset(
     env: ExecuteEnv,
     token: String,
 ) -> Result<Response, ContractError> {
-    if token == "" {
+    if token.is_empty() {
         return Err(ContractError::InvalidToken {});
     }
 
@@ -205,7 +205,7 @@ pub fn execute_remove_foundry_asset(
     env: ExecuteEnv,
     token: String,
 ) -> Result<Response, ContractError> {
-    if token == "" {
+    if token.is_empty() {
         return Err(ContractError::InvalidToken {});
     }
 
@@ -282,7 +282,7 @@ pub fn execute_remove_liquidity(
     token: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    if token == "" {
+    if token.is_empty() {
         return Err(ContractError::InvalidToken {});
     }
     if amount == Uint128::from(0u128) {
@@ -333,7 +333,7 @@ pub fn execute_withdraw_signed(
     salt: String,
     signature: String,
 ) -> Result<Response, ContractError> {
-    if token == "" {
+    if token.is_empty() {
         return Err(ContractError::InvalidToken {});
     }
     if amount == Uint128::from(0u128) {
@@ -396,7 +396,7 @@ pub fn execute_swap(
     target_token: String,
     target_address: String,
 ) -> Result<Response, ContractError> {
-    if target_chain_id == "" || target_token == "" || target_address == "" {
+    if target_chain_id.is_empty() || target_token.is_empty() || target_address.is_empty() {
         return Err(ContractError::InvalidTargetInfo);
     }
 

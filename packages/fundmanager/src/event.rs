@@ -24,7 +24,7 @@ pub struct SetFeeEvent<'a> {
 
 impl<'a> Event for SetFeeEvent<'a> {
     fn add_attributes(&self, rsp: &mut Response) {
-        rsp.attributes.push(attr("action", "add_signer"));
+        rsp.attributes.push(attr("action", "set_fee"));
         rsp.attributes.push(attr("fee", self.fee));
         rsp.attributes.push(attr("token", self.token));
         rsp.attributes.push(attr("from", self.from));
@@ -136,6 +136,7 @@ impl<'a> Event for BridgeSwapEvent<'a> {
         rsp.attributes.push(attr("from", self.from));
         rsp.attributes.push(attr("token", self.token));
         rsp.attributes.push(attr("amount", self.amount));
+        rsp.attributes.push(attr("fee_amount", self.fee_amount));
         rsp.attributes
             .push(attr("target_chain_id", self.target_chain_id));
         rsp.attributes.push(attr("target_token", self.target_token));
