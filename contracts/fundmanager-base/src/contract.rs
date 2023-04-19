@@ -260,11 +260,11 @@ pub fn execute_add_liquidity(env: ExecuteEnv) -> Result<Response, ContractError>
                     amount: unwrapped.amount.checked_add(amount)?,
                 });
             }
-            return Ok(Liquidity {
+            Ok(Liquidity {
                 user: info.sender.to_string(),
                 token: token.to_string(),
                 amount: amount,
-            });
+            })
         },
     )?;
 
@@ -504,8 +504,7 @@ pub fn get_signer(
         .secp256k1_recover_pubkey(&message, &signature_bytes[..64], recovery_id)
         .unwrap();
     let calculated_address = ethereum_address_raw(&calculated_pubkey).unwrap();
-    let address = format!("0x{}", hex::encode(calculated_address));
-    return address;
+    format!("0x{}", hex::encode(calculated_address))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -530,15 +529,15 @@ pub fn query(deps: Deps, _env: Env, msg: FundManagerQueryMsg) -> StdResult<Binar
 
 pub fn query_owner(deps: Deps) -> StdResult<String> {
     let owner = OWNER.load(deps.storage)?;
-    return Ok(owner.to_string());
+    Ok(owner.to_string())
 }
 
 pub fn query_fee(deps: Deps, token: String) -> StdResult<Fee> {
     let fee = FEE.load(deps.storage, token.as_str())?;
-    return Ok(Fee {
+    Ok(Fee {
         token: token,
         amount: fee,
-    });
+    })
 }
 
 pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Liquidity> {
@@ -546,7 +545,7 @@ pub fn query_liquidity(deps: Deps, owner: String, token: String) -> StdResult<Li
     if let Ok(Some(liquidity)) = LIQUIDITIES.may_load(deps.storage, (&token, &owner_addr)) {
         return Ok(liquidity);
     }
-    return Err(StdError::generic_err("liquidity does not exist"));
+    Err(StdError::generic_err("liquidity does not exist"))
 }
 
 pub fn query_all_liquidity(
@@ -554,7 +553,7 @@ pub fn query_all_liquidity(
     start_after: Option<(String, Addr)>,
     limit: Option<u32>,
 ) -> StdResult<Vec<Liquidity>> {
-    return read_liquidities(deps.storage, deps.api, start_after, limit);
+    read_liquidities(deps.storage, deps.api, start_after, limit)
 }
 
 pub fn query_signers(
@@ -614,7 +613,7 @@ pub fn read_signers(
     let limit = limit.unwrap_or(DEFAULT_LIMIT) as usize;
     let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
 
-    return SIGNERS
+    SIGNERS
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
@@ -623,7 +622,7 @@ pub fn read_signers(
             }
             return "".to_string();
         })
-        .collect::<Vec<String>>();
+        .collect::<Vec<String>>()
 }
 
 pub fn add_used_message(storage: &mut dyn Storage, salt: String) -> StdResult<Response> {
@@ -635,14 +634,14 @@ pub fn is_used_message(storage: &dyn Storage, salt: String) -> bool {
     if let Ok(Some(_)) = USED_MESSAGES.may_load(storage, salt.as_str()) {
         return true;
     }
-    return false;
+    false
 }
 
 pub fn is_signer(storage: &dyn Storage, signer: String) -> bool {
     if let Ok(Some(_)) = SIGNERS.may_load(storage, signer.as_str()) {
         return true;
     }
-    return false;
+    false
 }
 
 pub fn read_foundry_assets(
@@ -653,7 +652,7 @@ pub fn read_foundry_assets(
     let limit = limit.unwrap_or(DEFAULT_LIMIT) as usize;
     let start = start_after.map(|s| Bound::ExclusiveRaw(s.into()));
 
-    return FOUNDRY_ASSETS
+    FOUNDRY_ASSETS
         .range(storage, start, None, Order::Ascending)
         .take(limit)
         .map(|item| {
@@ -662,14 +661,14 @@ pub fn read_foundry_assets(
             }
             return "".to_string();
         })
-        .collect::<Vec<String>>();
+        .collect::<Vec<String>>()
 }
 
 pub fn is_foundry_asset(storage: &dyn Storage, foundry_asset: String) -> bool {
     if let Ok(Some(_)) = FOUNDRY_ASSETS.may_load(storage, foundry_asset.as_str()) {
         return true;
     }
-    return false;
+    false
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
