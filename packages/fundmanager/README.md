@@ -1,6 +1,6 @@
-# FIBER Router
+# Fund Manager
 
-`Multiswap` is a cosmwasm implementation of fund manager for multichain swap.
+`FundManager` is a cosmwasm implementation of fund manager for multichain swap.
 
 MultiSwap allows users to securely bridge any asset on network 1 for any asset on network 2 at transaction speed. Read the docs here: https://docs.ferrumnetwork.io/ferrum-network-ecosystem/v/multiswap-and-multichain-liquidity-pool-bridge/
 
@@ -13,6 +13,31 @@ MultiSwap is divided into three major parts
 ## Base
 
 At the contract initialization stage, contract owner is set. Here owner has permission to add/remove signer, add/remove foundry asset. Signers are the addresses that are generating signatures for withdrawals from the pool.
+
+### Data Types
+
+#### Liquidity
+
+`Liquidity` keeps the liquidity put by a single user per token.
+
+```rust
+pub struct Liquidity {
+    pub user: String,
+    pub token: String,
+    pub amount: Uint128,
+}
+```
+
+#### Fee
+
+`Fee` keeps the fee amount per token.
+
+```rust
+pub struct Fee {
+    pub token: String,
+    pub amount: Uint128,
+}
+```
 
 ### Messages
 
