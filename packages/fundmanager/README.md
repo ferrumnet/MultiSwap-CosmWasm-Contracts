@@ -1,6 +1,6 @@
-# FIBER Router
+# Fund Manager
 
-`Multiswap` is a cosmwasm implementation of fund manager for multichain swap.
+`FundManager` is a cosmwasm implementation of fund manager for multichain swap.
 
 MultiSwap allows users to securely bridge any asset on network 1 for any asset on network 2 at transaction speed. Read the docs here: https://docs.ferrumnetwork.io/ferrum-network-ecosystem/v/multiswap-and-multichain-liquidity-pool-bridge/
 

@@ -345,7 +345,7 @@ dependencies = [
  "cw-storage-plus",
  "cw-utils",
  "fiberrouter",
- "multiswap",
+ "fundmanager",
  "schemars",
  "serde",
  "thiserror",
@@ -356,6 +356,36 @@ name = "forward_ref"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
+
+[[package]]
+name = "fundmanager"
+version = "0.14.0"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-utils",
+ "schemars",
+ "serde",
+]
+
+[[package]]
+name = "fundmanager-base"
+version = "0.0.1"
+dependencies = [
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-storage-plus",
+ "cw-utils",
+ "fundmanager",
+ "hex",
+ "regex",
+ "rlp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "sha3",
+ "thiserror",
+]
 
 [[package]]
 name = "generic-array"
@@ -451,36 +481,6 @@ name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
-
-[[package]]
-name = "multiswap"
-version = "0.14.0"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-utils",
- "schemars",
- "serde",
-]
-
-[[package]]
-name = "multiswap-base"
-version = "0.0.1"
-dependencies = [
- "cosmwasm-schema",
- "cosmwasm-std",
- "cw-storage-plus",
- "cw-utils",
- "hex",
- "multiswap",
- "regex",
- "rlp",
- "schemars",
- "serde",
- "serde_json",
- "sha3",
- "thiserror",
-]
 
 [[package]]
 name = "once_cell"

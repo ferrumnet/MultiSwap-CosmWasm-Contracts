@@ -1,7 +1,7 @@
 [workspace]
 members = ["packages/*", "contracts/*"]
 
-[profile.release.package.multiswap-base]
+[profile.release.package.fundmanager-base]
 codegen-units = 1
 incremental = false
 

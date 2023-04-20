@@ -9,6 +9,6 @@ fn main() {
     create_dir_all(&out_dir).unwrap();
     remove_schemas(&out_dir).unwrap();
 
-    export_schema(&schema_for!(multiswap::MultiswapExecuteMsg), &out_dir);
-    export_schema(&schema_for!(multiswap::MultiswapQueryMsg), &out_dir);
+    export_schema(&schema_for!(fundmanager::FundManagerExecuteMsg), &out_dir);
+    export_schema(&schema_for!(fundmanager::FundManagerQueryMsg), &out_dir);
 }
