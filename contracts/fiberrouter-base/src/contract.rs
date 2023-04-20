@@ -6,7 +6,7 @@ use cosmwasm_std::{
 use fiberrouter::{
     FiberRouterExecuteMsg, FiberRouterQueryMsg, MigrateMsg, SetPoolEvent, TransferOwnershipEvent,
 };
-use multiswap::{MultiswapContract, MultiswapExecuteMsg};
+use fundmanager::{FundManagerContract, FundManagerExecuteMsg};
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
@@ -30,18 +30,17 @@ pub fn instantiate(
 /// To mitigate clippy::too_many_arguments warning
 pub struct ExecuteEnv<'a> {
     deps: DepsMut<'a>,
-    env: Env,
     info: MessageInfo,
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    env: Env,
+    _: Env,
     info: MessageInfo,
     msg: FiberRouterExecuteMsg,
 ) -> Result<Response, ContractError> {
-    let env = ExecuteEnv { deps, env, info };
+    let env = ExecuteEnv { deps, info };
     match msg {
         FiberRouterExecuteMsg::TransferOwnership { new_owner } => {
             execute_ownership_transfer(env, new_owner)
@@ -55,19 +54,10 @@ pub fn execute(
             signature,
         } => execute_withdraw_signed(env, payee, token, amount, salt, signature),
         FiberRouterExecuteMsg::Swap {
-            token,
-            amount,
             target_chain_id,
             target_token,
             target_address,
-        } => execute_swap(
-            env,
-            token,
-            amount,
-            target_chain_id,
-            target_token,
-            target_address,
-        ),
+        } => execute_swap(env, target_chain_id, target_token, target_address),
     }
 }
 
@@ -75,7 +65,7 @@ pub fn execute_ownership_transfer(
     env: ExecuteEnv,
     new_owner: String,
 ) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let new_owner_addr = deps.api.addr_validate(&new_owner)?;
 
     if info.sender != OWNER.load(deps.storage)? {
@@ -94,7 +84,7 @@ pub fn execute_ownership_transfer(
 }
 
 pub fn execute_set_pool(env: ExecuteEnv, new_pool: String) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let new_pool_addr = deps.api.addr_validate(&new_pool)?;
 
     if info.sender != OWNER.load(deps.storage)? {
@@ -123,16 +113,16 @@ pub fn execute_withdraw_signed(
     let deps = env.deps;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
-    // MultiswapContract is a function helper that provides several queries and message builder.
-    let multiswap = MultiswapContract(contract_addr);
-    // Call multiswap withdraw signed
-    let msg = multiswap.call(
-        MultiswapExecuteMsg::WithdrawSigned {
+    // FundManagerContract is a function helper that provides several queries and message builder.
+    let fundmanager = FundManagerContract(contract_addr);
+    // Call fundmanager withdraw signed
+    let msg = fundmanager.call(
+        FundManagerExecuteMsg::WithdrawSigned {
             payee: payee.to_string(),
             token: token.to_string(),
-            amount: amount.clone(),
-            salt: salt.to_string(),
-            signature: signature.to_string(),
+            amount: amount,
+            salt: salt,
+            signature: signature,
         },
         vec![],
     )?;
@@ -140,30 +130,26 @@ pub fn execute_withdraw_signed(
     let res = Response::new()
         .add_message(msg)
         .add_attribute("action", "withdraw_signed")
-        .add_attribute("payee", payee.to_string())
-        .add_attribute("token", token.to_string())
-        .add_attribute("amount", amount.to_string());
+        .add_attribute("payee", payee)
+        .add_attribute("token", token)
+        .add_attribute("amount", amount);
     Ok(res)
 }
 
 pub fn execute_swap(
     env: ExecuteEnv,
-    token: String,
-    amount: Uint128,
     target_chain_id: String,
     target_token: String,
     target_address: String,
 ) -> Result<Response, ContractError> {
-    let ExecuteEnv { deps, env: _, info } = env;
+    let ExecuteEnv { deps, info } = env;
     let pool = POOL.load(deps.storage)?;
     let contract_addr = deps.api.addr_validate(pool.as_str())?;
-    // MultiswapContract is a function helper that provides several queries and message builder.
-    let multiswap = MultiswapContract(contract_addr);
-    // Call multiswap swap
-    let msg = multiswap.call(
-        MultiswapExecuteMsg::Swap {
-            token: token.to_string(),
-            amount: amount.clone(),
+    // FundManagerContract is a function helper that provides several queries and message builder.
+    let fundmanager = FundManagerContract(contract_addr);
+    // Call fundmanager swap
+    let msg = fundmanager.call(
+        FundManagerExecuteMsg::Swap {
             target_chain_id: target_chain_id.to_string(),
             target_token: target_token.to_string(),
             target_address: target_address.to_string(),
@@ -174,11 +160,9 @@ pub fn execute_swap(
     let res = Response::new()
         .add_message(msg)
         .add_attribute("action", "swap")
-        .add_attribute("token", token.to_string())
-        .add_attribute("amount", amount.to_string())
-        .add_attribute("target_chain_id", target_chain_id.to_string())
-        .add_attribute("target_token", target_token.to_string())
-        .add_attribute("target_address", target_address.to_string());
+        .add_attribute("target_chain_id", target_chain_id)
+        .add_attribute("target_token", target_token)
+        .add_attribute("target_address", target_address);
     Ok(res)
 }
 
@@ -192,15 +176,15 @@ pub fn query(deps: Deps, _env: Env, msg: FiberRouterQueryMsg) -> StdResult<Binar
 
 pub fn query_owner(deps: Deps) -> StdResult<String> {
     let owner = OWNER.load(deps.storage)?;
-    return Ok(owner.to_string());
+    Ok(owner.to_string())
 }
 
 pub fn query_pool(deps: Deps) -> StdResult<String> {
     let pool = POOL.load(deps.storage)?;
-    return Ok(pool.to_string());
+    Ok(pool.to_string())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn migrate(deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+pub fn migrate(_: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
     Ok(Response::default())
 }
