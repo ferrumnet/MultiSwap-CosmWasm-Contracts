@@ -745,11 +745,13 @@ mod test {
             owner: owner.to_string(),
         };
 
-        let rsp = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         assert_eq!(query_owner(deps.as_ref()).unwrap(), owner.to_string());
         assert_eq!(OWNER.load(&deps.storage).unwrap(), owner.to_string());
         let rsp = read_signers(&deps.storage, None, None);
+        assert_eq!(rsp.len(), 0);
     }
 
     #[test]
@@ -968,9 +970,8 @@ mod test {
             owner: first_owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        /////////////////////////////////////////////////////////////
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -979,13 +980,6 @@ mod test {
         };
 
         let rsp = execute_ownership_transfer(execute_env, second_owner.to_string()).unwrap();
-
-        assert_eq!(
-            query_owner(deps.as_ref()).unwrap(),
-            second_owner.to_string()
-        );
-        assert_eq!(OWNER.load(&deps.storage).unwrap(), second_owner.to_string());
-
         assert_eq!(
             rsp.attributes,
             vec![
@@ -994,10 +988,15 @@ mod test {
                 attr("new_owner", second_owner.to_string())
             ]
         );
+        assert_eq!(
+            query_owner(deps.as_ref()).unwrap(),
+            second_owner.to_string()
+        );
+        assert_eq!(OWNER.load(&deps.storage).unwrap(), second_owner.to_string());
     }
 
     #[test]
-    fn test_execute_ownership_transfer__catch_err_unauthorized() {
+    fn test_execute_ownership_transfer_catch_err_unauthorized() {
         let first_owner = "address_to_be_first_owner";
         let second_owner = "address_to_be_second_owner";
 
@@ -1008,9 +1007,8 @@ mod test {
             owner: first_owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        /////////////////////////////////////////////////////////////
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1036,7 +1034,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1052,24 +1051,23 @@ mod test {
             Uint128::from(1u128),
         )
         .unwrap();
+        assert_eq!(
+            rsp.attributes,
+            vec![
+                attr("action", "set_fee".to_string()),
+                attr("fee", "1".to_string()),
+                attr("token", "token_address".to_string()),
+                attr("from", owner.to_string())
+            ]
+        );
 
         let query_res = query_fee(deps.as_ref(), "token_address".to_string()).unwrap();
         assert_eq!(query_res.token, "token_address".to_string());
         assert_eq!(query_res.amount, Uint128::from(1u128));
-
-        // ! assert_eq!(
-        //     rsp.attributes,
-        //     vec![
-        //         attr("action", "set_fee".to_string()),
-        //         attr("amount", Uint128::from(1u128)),
-        //         attr("token", "token_address".to_string()),
-        //         attr("from", owner.to_string())
-        //     ]
-        // );
     }
 
     #[test]
-    fn test_execute_set_fee__catch_err_unauthorized() {
+    fn test_execute_set_fee_catch_err_unauthorized() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1078,9 +1076,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        /////////////////////////////////////////////////////////////
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1101,7 +1098,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_set_fee__catch_err_invalid_token_address() {
+    fn test_execute_set_fee_catch_err_invalid_token_address() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1110,7 +1107,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1129,7 +1127,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_set_fee__catch_err_invalid_range_fee() {
+    fn test_execute_set_fee_catch_err_invalid_range_fee() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1138,7 +1136,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1166,7 +1165,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1176,10 +1176,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let rsp = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f13f".to_string(),
         );
+        assert_eq!(rsp.is_err(), false);
 
         let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 1);
@@ -1225,7 +1226,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_signer__catch_err_unauthorized() {
+    fn test_execute_add_signer_catch_err_unauthorized() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1234,7 +1235,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1256,7 +1258,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_signer__catch_err_invalid_ethereum_address() {
+    fn test_execute_add_signer_catch_err_invalid_ethereum_address() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1265,7 +1267,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1293,7 +1296,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1303,10 +1307,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f13f".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1314,10 +1319,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f26a".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 2);
@@ -1365,7 +1371,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_signer__catch_err_unauthorized() {
+    fn test_execute_remove_signer_catch_err_unauthorized() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1374,7 +1380,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1384,10 +1391,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f13f".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1395,10 +1403,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f26a".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 2);
@@ -1430,7 +1439,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_signer__catch_err_not_signer() {
+    fn test_execute_remove_signer_catch_err_not_signer() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1439,7 +1448,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1449,10 +1459,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f13f".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -1460,10 +1471,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f26a".to_string(),
         );
+        assert_eq!(res.is_err(), false);
 
         let signers: Vec<String> = query_signers(deps.as_ref(), None, None).unwrap();
         assert_eq!(signers.len(), 2);
@@ -1504,7 +1516,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1514,7 +1527,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address".to_string()),
             true
@@ -1548,7 +1562,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_foundry_asset__catch_err_unauthorized() {
+    fn test_execute_add_foundry_asset_catch_err_unauthorized() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1557,7 +1571,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1576,7 +1591,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_foundry_asset__catch_err_invalid_token() {
+    fn test_execute_add_foundry_asset_catch_err_invalid_token() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1585,7 +1600,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1613,7 +1629,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1623,7 +1640,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address".to_string()),
             true
@@ -1635,7 +1653,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address_2".to_string()),
             true
@@ -1669,7 +1688,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_foundry_asset__catch_err_unauthorized() {
+    fn test_execute_remove_foundry_asset_catch_err_unauthorized() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1678,7 +1697,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1688,7 +1708,9 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
+
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address".to_string()),
             true
@@ -1700,7 +1722,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address_2".to_string()),
             true
@@ -1721,7 +1744,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_foundry_asset__catch_err_invalid_token() {
+    fn test_execute_remove_foundry_asset_catch_err_invalid_token() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1730,7 +1753,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1740,7 +1764,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address".to_string()),
             true
@@ -1752,7 +1777,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address_2".to_string()),
             true
@@ -1773,7 +1799,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_foundry_asset__catch_err_not_foundry_asset() {
+    fn test_execute_remove_foundry_asset_catch_err_not_foundry_asset() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1782,7 +1808,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1792,7 +1819,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address".to_string()),
             true
@@ -1804,7 +1832,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        let res = execute_add_foundry_asset(execute_env, "token_address_2".to_string());
+        assert_eq!(res.is_err(), false);
         assert_eq!(
             is_foundry_asset(&deps.storage, "token_address_2".to_string()),
             true
@@ -1834,7 +1863,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1847,7 +1877,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
         assert_eq!(is_foundry_asset(&deps.storage, token.clone()), true);
 
         let execute_env = ExecuteEnv {
@@ -1908,7 +1939,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_liquidity__catch_err_not_foundry_asset() {
+    fn test_execute_add_liquidity_catch_err_not_foundry_asset() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1917,7 +1948,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1943,7 +1975,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_add_liquidity__catch_err__invalid_deposit_if_more_1_token() {
+    fn test_execute_add_liquidity_catch_err_invalid_deposit_if_more_1_token() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -1952,7 +1984,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -1965,7 +1998,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
         assert_eq!(is_foundry_asset(&deps.storage, token.clone()), true);
 
         let execute_env = ExecuteEnv {
@@ -2002,7 +2036,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2015,7 +2050,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2029,7 +2065,8 @@ mod test {
             ),
         };
 
-        execute_add_liquidity(execute_env);
+        let res = execute_add_liquidity(execute_env);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2057,7 +2094,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_liquidity__catch_err__not_foundry_asset() {
+    fn test_execute_remove_liquidity_catch_err_not_foundry_asset() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2066,12 +2103,12 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
         let token = "token_address".to_string();
-        let amount = Uint128::from(1000u128);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2088,7 +2125,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_liquidity__catch_err__liquidity_does_not_exist() {
+    fn test_execute_remove_liquidity_catch_err_liquidity_does_not_exist() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2097,7 +2134,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2110,7 +2148,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2124,7 +2163,8 @@ mod test {
             ),
         };
 
-        execute_add_liquidity(execute_env);
+        let res = execute_add_liquidity(execute_env);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2141,7 +2181,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_liquidity__catch_err__invalid_token() {
+    fn test_execute_remove_liquidity_catch_err_invalid_token() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2150,7 +2190,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2163,7 +2204,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2177,7 +2219,8 @@ mod test {
             ),
         };
 
-        execute_add_liquidity(execute_env);
+        let res = execute_add_liquidity(execute_env);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2194,7 +2237,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_remove_liquidity__catch_err__zero_amount() {
+    fn test_execute_remove_liquidity_catch_err_zero_amount() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2203,7 +2246,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2216,7 +2260,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2230,7 +2275,8 @@ mod test {
             ),
         };
 
-        execute_add_liquidity(execute_env);
+        let res = execute_add_liquidity(execute_env);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2256,7 +2302,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2266,12 +2313,6 @@ mod test {
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd6eea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194f8a41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let signer = get_signer(
             &deps.api,
@@ -2291,7 +2332,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2299,7 +2341,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2339,7 +2382,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_withdraw_signed__catch_err_invalid_token_address() {
+    fn test_execute_withdraw_signed_catch_err_invalid_token_address() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2348,7 +2391,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2377,7 +2421,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2385,7 +2430,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2415,7 +2461,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_withdraw_signed__catch_err_zero_amount() {
+    fn test_execute_withdraw_signed_catch_err_zero_amount() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2424,7 +2470,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2434,12 +2481,6 @@ mod test {
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd6eea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194f8a41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let signer = get_signer(
             &deps.api,
@@ -2459,7 +2500,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2467,7 +2509,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2497,7 +2540,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_withdraw_signed__catch_err_not_foundry_asset() {
+    fn test_execute_withdraw_signed_catch_err_not_foundry_asset() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2506,7 +2549,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2516,12 +2560,6 @@ mod test {
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd6eea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194f8a41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let signer = get_signer(
             &deps.api,
@@ -2541,7 +2579,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2571,7 +2610,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_withdraw_signed__catch_err_invalid_signer() {
+    fn test_execute_withdraw_signed_catch_err_invalid_signer() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2580,7 +2619,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2591,39 +2631,15 @@ mod test {
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd66ea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194bba41b";
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
-        let signer = get_signer(
-            &deps.api,
-            env.block.chain_id,
-            owner.to_string(),
-            token.clone(),
-            Uint128::from(700u128),
-            salt.clone(),
-            signature.to_string(),
-        );
-
         let env = mock_env();
-
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
             info: info.clone(),
         };
 
-        // execute_add_signer(execute_env, signer.to_string());
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2653,7 +2669,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_withdraw_signed__catch_err_used_salt() {
+    fn test_execute_withdraw_signed_catch_err_used_salt() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2662,7 +2678,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2672,12 +2689,6 @@ mod test {
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd66ea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194bba41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let signer = get_signer(
             &deps.api,
@@ -2697,7 +2708,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2705,15 +2717,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
-        add_used_message(&mut deps.storage, salt.clone());
+        let res = add_used_message(&mut deps.storage, salt.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2752,7 +2760,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2765,7 +2774,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         // execute swap before setting fee and ensure fee is considered as zero
         let execute_env = ExecuteEnv {
@@ -2808,7 +2818,8 @@ mod test {
             info: info.clone(),
         };
 
-        let rsp = execute_set_fee(execute_env, token.clone(), Uint128::from(2000u128)).unwrap();
+        let rsp = execute_set_fee(execute_env, token.clone(), Uint128::from(2000u128));
+        assert_eq!(rsp.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2857,7 +2868,7 @@ mod test {
         assert_eq!(balance.amount.to_string(), "0token_address");
     }
     #[test]
-    fn test_execute_swap__catch_err_more_1_fund() {
+    fn test_execute_swap_catch_err_more_1_fund() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2866,7 +2877,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2879,7 +2891,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2913,7 +2926,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_swap__catch_err_invalid_target_info() {
+    fn test_execute_swap_catch_err_invalid_target_info() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
         let env = mock_env();
@@ -2922,7 +2935,8 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -2935,7 +2949,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_foundry_asset(execute_env, token.clone());
+        let res = execute_add_foundry_asset(execute_env, token.clone());
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -2972,15 +2987,10 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let rsp = execute(
             deps.as_mut(),
@@ -3004,12 +3014,6 @@ mod test {
         let owner = "address_to_be_owner_2";
         let info = mock_info(owner, &[]);
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
         let rsp = execute(
             deps.as_mut(),
             env.clone(),
@@ -3020,38 +3024,31 @@ mod test {
             },
         )
         .unwrap();
+        assert_eq!(
+            rsp.attributes,
+            vec![
+                attr("action", "set_fee".to_string()),
+                attr("fee", "22".to_string()),
+                attr("token", "token_address".to_string()),
+                attr("from", owner.to_string())
+            ]
+        );
 
         let query_res = query_fee(deps.as_ref(), "token_address".to_string()).unwrap();
         assert_eq!(query_res.token, "token_address".to_string());
         assert_eq!(query_res.amount, Uint128::from(22u128));
 
-        // ! ISSUE
-        // ! assert_eq!(
-        //     rsp.attributes,
-        //     vec![
-        //         attr("action", "add_signer".to_string()),
-        //         attr("amount", Uint128::from(22u128)),
-        //         attr("token", "token_address".to_string()),
-        //         attr("from", owner.to_string())
-        //     ]
-        // );
-
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
             env: env.clone(),
             info: info.clone(),
         };
 
-        execute_add_signer(
+        let res = execute_add_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f13f".to_string(),
         );
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
+        assert_eq!(res.is_err(), false);
 
         let rsp = execute(
             deps.as_mut(),
@@ -3086,12 +3083,6 @@ mod test {
             ]
         );
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
         let rsp = execute(
             deps.as_mut(),
             env.clone(),
@@ -3121,27 +3112,15 @@ mod test {
             ]
         );
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
-        let rsp = execute(
+        let res = execute(
             deps.as_mut(),
             env.clone(),
             info.clone(),
             FundManagerExecuteMsg::AddFoundryAsset {
                 token: "token_address_mock".to_string(),
             },
-        )
-        .unwrap();
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
+        );
+        assert_eq!(res.is_err(), false);
 
         let rsp = execute(
             deps.as_mut(),
@@ -3167,12 +3146,6 @@ mod test {
             ]
         );
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
         let rsp = execute(
             deps.as_mut(),
             env.clone(),
@@ -3191,18 +3164,6 @@ mod test {
                 attr("from", owner.to_string())
             ]
         );
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: mock_info(
-                owner,
-                &[cosmwasm_std::Coin {
-                    denom: "token_address".to_string(),
-                    amount: Uint128::from(22u128),
-                }],
-            ),
-        };
 
         let rsp = execute(
             deps.as_mut(),
@@ -3237,12 +3198,6 @@ mod test {
             ]
         );
 
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
         let rsp = execute(
             deps.as_mut(),
             env.clone(),
@@ -3275,16 +3230,9 @@ mod test {
         );
 
         let token = "token_address".to_string();
-        let amount = Uint128::from(1000u128);
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd6eea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194f8a41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let signer = get_signer(
             &deps.api,
@@ -3304,19 +3252,8 @@ mod test {
             info: info.clone(),
         };
 
-        execute_add_signer(execute_env, signer.to_string());
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: mock_info(
-                MOCK_CONTRACT_ADDR,
-                &[cosmwasm_std::Coin {
-                    denom: token.clone(),
-                    amount: amount,
-                }],
-            ),
-        };
+        let res = execute_add_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let rsp = execute(
             deps.as_mut(),
@@ -3345,18 +3282,6 @@ mod test {
                 attr("signature", signature.to_string())
             ]
         );
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: mock_info(
-                owner,
-                &[cosmwasm_std::Coin {
-                    denom: token.clone(),
-                    amount: Uint128::from(777u128),
-                }],
-            ),
-        };
 
         let rsp = execute(
             deps.as_mut(),
@@ -3397,10 +3322,9 @@ mod test {
                 owner: owner.to_string(),
                 token: token.clone(),
             },
-        );
-
-        // assert_eq!(Liquidity::to_normal(rsp, &deps.api), "token_address".to_string());
-        // assert_eq!(rsp.amount, Uint128::from(12u128));
+        )
+        .unwrap();
+        assert_eq!(rsp.to_string(), "eyJ1c2VyIjoiYWRkcmVzc190b19iZV9vd25lcl8yIiwidG9rZW4iOiJ0b2tlbl9hZGRyZXNzIiwiYW1vdW50IjoiMTIifQ==");
 
         let rsp = query(deps.as_ref(), env.clone(), FundManagerQueryMsg::Owner {}).unwrap();
 
@@ -3418,20 +3342,7 @@ mod test {
             },
         )
         .unwrap();
-
-        // assert_eq!();
-
-        let rsp = query(
-            deps.as_ref(),
-            env.clone(),
-            FundManagerQueryMsg::AllLiquidity {
-                start_after: None,
-                limit: None,
-            },
-        )
-        .unwrap();
-
-        // assert_eq!();
+        assert_eq!(rsp.to_string(), "W3sidXNlciI6ImFkZHJlc3NfdG9fYmVfb3duZXJfMiIsInRva2VuIjoidG9rZW5fYWRkcmVzcyIsImFtb3VudCI6IjEyIn1d");
 
         let rsp = query(
             deps.as_ref(),
@@ -3442,8 +3353,7 @@ mod test {
             },
         )
         .unwrap();
-
-        // assert_eq!();
+        assert_eq!(rsp.to_string(), "WyIweDg5MjljYmIxMWZkZDU3OThkYjVmNjM4YTUwMDIyMzVjNjQxMmYyNmEiLCIweGFkN2Y4MWNkMTg0NGMyMzk0MzQ5ZjIyMDY4Y2VmNjUxMTkwNGUwOGUiXQ==");
 
         let rsp = query(
             deps.as_ref(),
@@ -3454,8 +3364,7 @@ mod test {
             },
         )
         .unwrap();
-
-        // assert_eq!();
+        assert_eq!(rsp.to_string(), "WyJ0b2tlbl9hZGRyZXNzIl0=");
 
         let rsp = query(
             deps.as_ref(),
@@ -3465,8 +3374,10 @@ mod test {
             },
         )
         .unwrap();
-
-        // assert_eq!();
+        assert_eq!(
+            rsp.to_string(),
+            "eyJ0b2tlbiI6InRva2VuX2FkZHJlc3MiLCJhbW91bnQiOiIyMiJ9"
+        );
 
         let rsp = query_liquidity(
             deps.as_ref(),
@@ -3486,20 +3397,14 @@ mod test {
             info: info.clone(),
         };
 
-        execute_remove_signer(
+        let res = execute_remove_signer(
             execute_env,
             "0x8929cbb11fdd5798db5f638a5002235c6412f26a".to_string(),
         );
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
+        assert_eq!(res.is_err(), false);
 
         let rsp = read_signers(&deps.storage, None, None);
-
-        // assert_eq!(rsp.to_string(), "".to_string());
+        assert_eq!(rsp.len(), 1);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -3507,11 +3412,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_remove_signer(execute_env, signer.to_string());
+        let res = execute_remove_signer(execute_env, signer.to_string());
+        assert_eq!(res.is_err(), false);
 
         let rsp = read_signers(&deps.storage, None, None);
-
-        // assert_eq!(rsp.to_string(), "".to_string());
+        assert_eq!(rsp.len(), 0);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -3519,11 +3424,11 @@ mod test {
             info: info.clone(),
         };
 
-        execute_remove_foundry_asset(execute_env, "token_address".to_string());
+        let res = execute_remove_foundry_asset(execute_env, "token_address".to_string());
+        assert_eq!(res.is_err(), false);
 
         let rsp = read_foundry_assets(&deps.storage, None, None);
-
-        // assert_eq!(rsp.to_string(), "".to_string());
+        assert_eq!(rsp.len(), 0);
     }
     #[test]
     fn test_migrate() {
@@ -3535,15 +3440,10 @@ mod test {
             owner: owner.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
 
         let rsp = migrate(deps.as_mut(), env.clone(), MigrateMsg {}).unwrap();
 
@@ -3552,26 +3452,10 @@ mod test {
 
     #[test]
     fn test_ethereum_address_raw() {
-        let owner = "address_to_be_owner";
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(owner, &[]);
-        let msg = InstantiateMsg {
-            owner: owner.to_string(),
-        };
-
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
         // 0x910266349a2aaca44ce909b6845e8c1ab75f475e
         // [4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211, 123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211, 181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127, 95, 97, 178, 42, 20, 244, 83, 87, 235]
         let signer = "0x910266349a2aaca44ce909b6845e8c1ab75f475e".to_string();
-        let mut pubkey_vec: Vec<u8> = Vec::from([
+        let pubkey_vec: Vec<u8> = Vec::from([
             4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211,
             123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211,
             181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127,
@@ -3584,28 +3468,8 @@ mod test {
     }
 
     #[test]
-    fn test_ethereum_address_raw__catch_err_empty_key() {
-        let owner = "address_to_be_owner";
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(owner, &[]);
-        let msg = InstantiateMsg {
-            owner: owner.to_string(),
-        };
-
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
-        // 0x910266349a2aaca44ce909b6845e8c1ab75f475e
-        // [4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211, 123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211, 181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127, 95, 97, 178, 42, 20, 244, 83, 87, 235]
-        let signer = "0x910266349a2aaca44ce909b6845e8c1ab75f475e".to_string();
-        let mut pubkey_vec: Vec<u8> = Vec::from([]);
-
+    fn test_ethereum_address_raw_catch_err_empty_key() {
+        let pubkey_vec: Vec<u8> = Vec::from([]);
         assert_eq!(
             ethereum_address_raw(&pubkey_vec).unwrap_err().to_string(),
             "Generic error: Public key must not be empty".to_string()
@@ -3613,27 +3477,10 @@ mod test {
     }
 
     #[test]
-    fn test_ethereum_address_raw__catch_err_invalid_key() {
-        let owner = "address_to_be_owner";
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(owner, &[]);
-        let msg = InstantiateMsg {
-            owner: owner.to_string(),
-        };
-
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
+    fn test_ethereum_address_raw_catch_err_invalid_key() {
         // 0x910266349a2aaca44ce909b6845e8c1ab75f475e
         // [4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211, 123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211, 181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127, 95, 97, 178, 42, 20, 244, 83, 87, 235]
-        let signer = "0x910266349a2aaca44ce909b6845e8c1ab75f475e".to_string();
-        let mut pubkey_vec: Vec<u8> = Vec::from([
+        let pubkey_vec: Vec<u8> = Vec::from([
             5, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211,
             123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211,
             181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127,
@@ -3647,27 +3494,10 @@ mod test {
     }
 
     #[test]
-    fn test_ethereum_address_raw__catch_err_invalid_length() {
-        let owner = "address_to_be_owner";
-        let mut deps = mock_dependencies();
-        let env = mock_env();
-        let info = mock_info(owner, &[]);
-        let msg = InstantiateMsg {
-            owner: owner.to_string(),
-        };
-
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            env: env.clone(),
-            info: info.clone(),
-        };
-
+    fn test_ethereum_address_raw_catch_err_invalid_length() {
         // 0x910266349a2aaca44ce909b6845e8c1ab75f475e
         // [4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211, 123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211, 181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127, 95, 97, 178, 42, 20, 244, 83, 87, 235]
-        let signer = "0x910266349a2aaca44ce909b6845e8c1ab75f475e".to_string();
-        let mut pubkey_vec: Vec<u8> = Vec::from([
+        let pubkey_vec: Vec<u8> = Vec::from([
             4, 66, 91, 185, 143, 51, 145, 149, 174, 15, 8, 226, 58, 172, 220, 172, 176, 8, 58, 211,
             123, 186, 203, 240, 64, 112, 233, 120, 16, 129, 196, 206, 212, 201, 204, 154, 66, 211,
             181, 116, 10, 250, 253, 162, 211, 110, 216, 254, 162, 49, 63, 48, 133, 29, 153, 127,
