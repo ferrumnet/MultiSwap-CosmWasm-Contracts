@@ -192,8 +192,7 @@ pub fn migrate(_: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, Cont
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        attr, from_binary, to_binary, BalanceResponse, BankQuery, Binary, QueryRequest, Response,
-        Uint128,
+        attr, from_binary, to_binary, BalanceResponse, BankQuery, QueryRequest, Response, Uint128,
     };
 
     use fiberrouter::{FiberRouterExecuteMsg, FiberRouterQueryMsg, MigrateMsg};
@@ -223,7 +222,8 @@ mod test {
             pool: pool.to_string(),
         };
 
-        let rsp = instantiate(deps.as_mut(), env.clone(), info.clone(), msg).unwrap();
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         assert_eq!(query_owner(deps.as_ref()).unwrap(), owner.to_string());
         assert_eq!(OWNER.load(&deps.storage).unwrap(), owner.to_string());
@@ -258,7 +258,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_ownership_transfer__catch_err_unauthorized() {
+    fn test_execute_ownership_transfer_catch_err_unauthorized() {
         let first_owner = "address_to_be_first_owner";
         let second_owner = "address_to_be_second_owner";
         let pool = "address_to_be_pool";
@@ -271,7 +271,8 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -314,7 +315,7 @@ mod test {
     }
 
     #[test]
-    fn test_execute_set_pool__catch_err_unauthorized() {
+    fn test_execute_set_pool_catch_err_unauthorized() {
         let first_owner = "address_to_be_first_owner";
         let pool = "address_to_be_pool";
         let second_pool = "address_to_be_second_pool";
@@ -327,7 +328,8 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),
@@ -354,7 +356,8 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -409,7 +412,8 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
 
@@ -470,10 +474,10 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         let rsp = migrate(deps.as_mut(), env.clone(), MigrateMsg {}).unwrap();
-
         assert_eq!(rsp, Response::default());
     }
 
@@ -489,14 +493,10 @@ mod test {
             pool: pool.to_string(),
         };
 
-        instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
 
         /////////////////////////////////////////////////////////////
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            info: info.clone(),
-        };
 
         let rsp = execute(
             deps.as_mut(),
@@ -518,21 +518,9 @@ mod test {
         );
 
         let token = "token_address".to_string();
-        let amount = Uint128::from(1000u128);
         let salt = "salt".to_string();
         let signature =
             "dada130255a447ecf434a2df9193e6fbba663e4546c35c075cd6eea21d8c7cb1714b9b65a4f7f604ff6aad55fba73f8c36514a512bbbba03709b37069194f8a41b";
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            info: mock_info(
-                MOCK_CONTRACT_ADDR,
-                &[cosmwasm_std::Coin {
-                    denom: token.clone(),
-                    amount: amount,
-                }],
-            ),
-        };
 
         let rsp = execute(
             deps.as_mut(),
@@ -557,17 +545,6 @@ mod test {
                 attr("amount", Uint128::from(700u128)),
             ]
         );
-
-        let execute_env = ExecuteEnv {
-            deps: deps.as_mut(),
-            info: mock_info(
-                owner,
-                &[cosmwasm_std::Coin {
-                    denom: token.clone(),
-                    amount: Uint128::from(777u128),
-                }],
-            ),
-        };
 
         let rsp = execute(
             deps.as_mut(),
