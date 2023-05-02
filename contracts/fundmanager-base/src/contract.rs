@@ -679,7 +679,8 @@ pub fn migrate(_: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, Cont
 #[cfg(test)]
 mod test {
     use cosmwasm_std::{
-        attr, from_binary, to_binary, BalanceResponse, BankQuery, QueryRequest, Response, Uint128,
+        attr, from_binary, to_binary, Addr, BalanceResponse, BankQuery, QueryRequest, Response,
+        Uint128,
     };
 
     use fundmanager::{FundManagerExecuteMsg, FundManagerQueryMsg, MigrateMsg};
@@ -693,8 +694,8 @@ mod test {
         execute_add_liquidity, execute_add_signer, execute_ownership_transfer,
         execute_remove_foundry_asset, execute_remove_liquidity, execute_remove_signer,
         execute_set_fee, execute_swap, execute_withdraw_signed, get_signer, instantiate,
-        is_foundry_asset, is_used_message, migrate, query, query_fee, query_liquidity, query_owner,
-        query_signers, read_foundry_assets, read_signers, ExecuteEnv,
+        is_foundry_asset, is_used_message, migrate, query, query_all_liquidity, query_fee,
+        query_liquidity, query_owner, query_signers, read_foundry_assets, read_signers, ExecuteEnv,
     };
 
     use cosmwasm_std::testing::{
@@ -903,6 +904,17 @@ mod test {
         .unwrap();
         assert_eq!(liquidity.token, "acudos".to_string());
         assert_eq!(liquidity.amount, Uint128::from(500u128));
+
+        let all_liquidity = query_all_liquidity(
+            deps.as_ref(),
+            Some((
+                "acudos".to_string(),
+                Addr::unchecked("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym"),
+            )),
+            Some(10u32),
+        )
+        .unwrap();
+        assert_eq!(all_liquidity.len(), 0);
 
         // removing liquidity more than the owned liquidity
         let eenv = ExecuteEnv {
@@ -2754,6 +2766,41 @@ mod test {
         };
 
         execute_add_foundry_asset(execute_env, token.clone());
+
+        // execute swap before setting fee and ensure fee is considered as zero
+        let execute_env = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info(
+                owner,
+                &[cosmwasm_std::Coin {
+                    denom: token.clone(),
+                    amount: amount,
+                }],
+            ),
+        };
+
+        let rsp = execute_swap(
+            execute_env,
+            "137".to_string(),
+            "token_address_out_chain".to_string(),
+            "user_address_out_chain".to_string(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            rsp.attributes,
+            vec![
+                attr("action", "swap".to_string()),
+                attr("from", owner.to_string()),
+                attr("token", token.clone()),
+                attr("amount", amount),
+                attr("fee_amount", "0".to_string()),
+                attr("target_chain_id", "137".to_string()),
+                attr("target_token", "token_address_out_chain".to_string()),
+                attr("target_address", "user_address_out_chain".to_string()),
+            ]
+        );
 
         let execute_env = ExecuteEnv {
             deps: deps.as_mut(),

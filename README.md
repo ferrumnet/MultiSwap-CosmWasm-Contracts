@@ -119,18 +119,15 @@ open tarpaulin-report.html
 
 ```
 || Uncovered Lines:
-|| contracts/fiberrouter-base/src/contract.rs: 17, 23, 25-26, 28-29, 40, 46-49, 51, 53-58, 60-64, 66-71, 76, 80-81, 84-85, 88-89, 92-93, 95-96, 99-101, 104-105, 108-109, 112-113, 115-116, 119, 127-129, 132, 134-140, 142, 145-146, 148-151, 154, 162-164, 166, 168-174, 176, 179-180, 182-187, 191-194, 198-200, 203-205, 209-210
-|| contracts/fundmanager-base/src/contract.rs: 45, 51-54, 56-61, 63-64, 66-67, 70-75, 77-81, 83-88, 102, 128, 152, 179, 204, 229, 255, 261, 264, 267, 277-279, 311, 331, 353, 373, 378, 427, 430, 453, 473, 476, 479, 533-536, 538-539, 541-543, 545-546, 548, 557-561, 571, 574, 579, 590, 595-599, 605, 611-613, 615-620, 626-633, 653, 674, 677, 683-684, 686-691, 693, 695, 706-707
-|| packages/fiberrouter/src/event.rs: 11-14, 25-28
-|| packages/fundmanager/src/helpers.rs: 14-15, 18, 23-27, 29
-|| packages/fundmanager/src/query.rs: 39-43
+|| contracts/fiberrouter-base/src/contract.rs: 48
+|| contracts/fundmanager-base/src/contract.rs: 623, 662
 || Tested/Total Lines:
-|| contracts/fiberrouter-base/src/contract.rs: 0/103 +0.00%
-|| contracts/fundmanager-base/src/contract.rs: 253/368 +0.00%
-|| packages/fiberrouter/src/event.rs: 0/8 +0.00%
-|| packages/fundmanager/src/event.rs: 54/54 +0.00%
-|| packages/fundmanager/src/helpers.rs: 0/9 +0.00%
-|| packages/fundmanager/src/query.rs: 0/5 +0.00%
+|| contracts/fiberrouter-base/src/contract.rs: 91/92 +20.65%
+|| contracts/fundmanager-base/src/contract.rs: 337/339 +0.00%
+|| packages/fiberrouter/src/event.rs: 8/8 +0.00%
+|| packages/fundmanager/src/event.rs: 55/55 +0.00%
+|| packages/fundmanager/src/helpers.rs: 9/9 +0.00%
+|| packages/fundmanager/src/query.rs: 5/5 +0.00%
 ||
-56.12% coverage, 307/547 lines covered, +0.00% change in coverage
+99.41% coverage, 505/508 lines covered, +3.74% change in coverage
 ```
