@@ -7,13 +7,15 @@ use cosmwasm_std::{
 use fundmanager::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
     BridgeWithdrawSignedEvent, Fee, FundManagerExecuteMsg, FundManagerQueryMsg, Liquidity,
-    MigrateMsg, RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent, SetFeeEvent,
-    TransferOwnershipEvent, WithdrawSignMessage,
+    MigrateMsg, RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent,
+    SetFeeCollectorEvent, SetFeeEvent, TransferOwnershipEvent, WithdrawSignMessage,
 };
 
 use crate::error::ContractError;
 use crate::msg::InstantiateMsg;
-use crate::state::{FEE, FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES};
+use crate::state::{
+    FEE, FEE_COLLECTOR, FOUNDRY_ASSETS, LIQUIDITIES, OWNER, SIGNERS, USED_MESSAGES,
+};
 use cw_storage_plus::Bound;
 use cw_utils::Event;
 use regex::Regex;
@@ -29,6 +31,8 @@ pub fn instantiate(
 ) -> StdResult<Response> {
     let owner = deps.api.addr_validate(&msg.owner)?;
     OWNER.save(deps.storage, &owner)?;
+    let fee_collector = deps.api.addr_validate(&msg.fee_collector)?;
+    FEE_COLLECTOR.save(deps.storage, &fee_collector)?;
     Ok(Response::default())
 }
 
@@ -50,6 +54,9 @@ pub fn execute(
     match msg {
         FundManagerExecuteMsg::TransferOwnership { new_owner } => {
             execute_ownership_transfer(env, new_owner)
+        }
+        FundManagerExecuteMsg::SetFeeCollector { collector } => {
+            execute_set_fee_collector(env, collector)
         }
         FundManagerExecuteMsg::SetFee { token, fee } => execute_set_fee(env, token, fee),
         FundManagerExecuteMsg::AddSigner { signer } => execute_add_signer(env, signer),
@@ -96,6 +103,29 @@ pub fn execute_ownership_transfer(
         new_owner: new_owner.as_str(),
     };
     event.add_attributes(&mut rsp);
+    Ok(rsp)
+}
+
+pub fn execute_set_fee_collector(
+    env: ExecuteEnv,
+    collector: String,
+) -> Result<Response, ContractError> {
+    let ExecuteEnv { deps, env: _, info } = env;
+    let collector_addr = deps.api.addr_validate(&collector)?;
+
+    if info.sender != OWNER.load(deps.storage)? {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    let mut rsp = Response::default();
+    FEE_COLLECTOR.save(deps.storage, &collector_addr)?;
+
+    let event = SetFeeCollectorEvent {
+        from: info.sender.as_str(),
+        collector: collector.as_str(),
+    };
+    event.add_attributes(&mut rsp);
+
     Ok(rsp)
 }
 
@@ -425,9 +455,9 @@ pub fn execute_swap(
     let fee_amount = amount * fee / fee_multiplier;
 
     if !fee_amount.is_zero() {
-        let owner = OWNER.load(deps.storage)?;
+        let fee_collector = FEE_COLLECTOR.load(deps.storage)?;
         let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
-            to_address: owner.to_string(),
+            to_address: fee_collector.to_string(),
             amount: coins(fee_amount.u128(), token.to_string()),
         });
         rsp = Response::new().add_message(bank_send_msg);
@@ -517,6 +547,7 @@ pub fn query(deps: Deps, _env: Env, msg: FundManagerQueryMsg) -> StdResult<Binar
             to_binary(&query_all_liquidity(deps, start_after, limit)?)
         }
         FundManagerQueryMsg::Owner {} => to_binary(&query_owner(deps)?),
+        FundManagerQueryMsg::FeeCollector {} => to_binary(&query_fee_collector(deps)?),
         FundManagerQueryMsg::Signers { start_after, limit } => {
             to_binary(&query_signers(deps, start_after, limit)?)
         }
@@ -529,6 +560,11 @@ pub fn query(deps: Deps, _env: Env, msg: FundManagerQueryMsg) -> StdResult<Binar
 
 pub fn query_owner(deps: Deps) -> StdResult<String> {
     let owner = OWNER.load(deps.storage)?;
+    Ok(owner.to_string())
+}
+
+pub fn query_fee_collector(deps: Deps) -> StdResult<String> {
+    let owner = FEE_COLLECTOR.load(deps.storage)?;
     Ok(owner.to_string())
 }
 
@@ -693,9 +729,10 @@ mod test {
         add_used_message, ethereum_address_raw, execute, execute_add_foundry_asset,
         execute_add_liquidity, execute_add_signer, execute_ownership_transfer,
         execute_remove_foundry_asset, execute_remove_liquidity, execute_remove_signer,
-        execute_set_fee, execute_swap, execute_withdraw_signed, get_signer, instantiate,
-        is_foundry_asset, is_used_message, migrate, query, query_all_liquidity, query_fee,
-        query_liquidity, query_owner, query_signers, read_foundry_assets, read_signers, ExecuteEnv,
+        execute_set_fee, execute_set_fee_collector, execute_swap, execute_withdraw_signed,
+        get_signer, instantiate, is_foundry_asset, is_used_message, migrate, query,
+        query_all_liquidity, query_fee, query_fee_collector, query_liquidity, query_owner,
+        query_signers, read_foundry_assets, read_signers, ExecuteEnv,
     };
 
     use cosmwasm_std::testing::{
@@ -743,6 +780,7 @@ mod test {
         let info = mock_info(deployer, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -759,6 +797,7 @@ mod test {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            fee_collector: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
         };
         let env = mock_env();
         let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
@@ -786,6 +825,7 @@ mod test {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            fee_collector: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
         };
         let env = mock_env();
         let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
@@ -826,6 +866,7 @@ mod test {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            fee_collector: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
         };
         let env = mock_env();
         let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
@@ -855,6 +896,7 @@ mod test {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            fee_collector: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
         };
         let env = mock_env();
         let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
@@ -945,6 +987,7 @@ mod test {
         let mut deps = mock_dependencies();
         let msg = InstantiateMsg {
             owner: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
+            fee_collector: "cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym".to_string(),
         };
         let env = mock_env();
         let info = mock_info("cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym", &[]);
@@ -968,6 +1011,7 @@ mod test {
         let info = mock_info(first_owner, &[]);
         let msg = InstantiateMsg {
             owner: first_owner.to_string(),
+            fee_collector: first_owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1005,6 +1049,7 @@ mod test {
         let info = mock_info(first_owner, &[]);
         let msg = InstantiateMsg {
             owner: first_owner.to_string(),
+            fee_collector: first_owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1025,6 +1070,72 @@ mod test {
     }
 
     #[test]
+    fn test_execute_set_fee_collector() {
+        let owner = "address_to_be_owner";
+        let collector = "address_to_be_collector";
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(owner, &[]);
+        let msg = InstantiateMsg {
+            owner: owner.to_string(),
+            fee_collector: owner.to_string(),
+        };
+
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
+
+        /////////////////////////////////////////////////////////////
+
+        let execute_env = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: info.clone(),
+        };
+
+        let rsp = execute_set_fee_collector(execute_env, collector.to_string()).unwrap();
+        assert_eq!(
+            rsp.attributes,
+            vec![
+                attr("action", "set_fee_collector".to_string()),
+                attr("collector", collector.to_string()),
+                attr("from", owner.to_string())
+            ]
+        );
+
+        let query_res = query_fee_collector(deps.as_ref()).unwrap();
+        assert_eq!(query_res, collector.to_string());
+    }
+
+    #[test]
+    fn test_execute_set_fee_collector_catch_err_unauthorized() {
+        let owner = "address_to_be_owner";
+        let collector = "address_to_be_collector";
+        let mut deps = mock_dependencies();
+        let env = mock_env();
+        let info = mock_info(owner, &[]);
+        let msg = InstantiateMsg {
+            owner: owner.to_string(),
+            fee_collector: owner.to_string(),
+        };
+
+        let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
+        assert_eq!(res.is_err(), false);
+
+        let execute_env = ExecuteEnv {
+            deps: deps.as_mut(),
+            env: env.clone(),
+            info: mock_info("other", &[]),
+        };
+
+        assert_eq!(
+            execute_set_fee_collector(execute_env, collector.to_string(),)
+                .unwrap_err()
+                .to_string(),
+            (ContractError::Unauthorized {}).to_string()
+        );
+    }
+
+    #[test]
     fn test_execute_set_fee() {
         let owner = "address_to_be_owner";
         let mut deps = mock_dependencies();
@@ -1032,6 +1143,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1074,6 +1186,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1105,6 +1218,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1134,6 +1248,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1163,6 +1278,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1233,6 +1349,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1265,6 +1382,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1294,6 +1412,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1378,6 +1497,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1446,6 +1566,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1514,6 +1635,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1569,6 +1691,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1598,6 +1721,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1627,6 +1751,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1695,6 +1820,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1751,6 +1877,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1806,6 +1933,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1861,6 +1989,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1946,6 +2075,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -1982,6 +2112,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2034,6 +2165,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2101,6 +2233,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2132,6 +2265,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2188,6 +2322,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2244,6 +2379,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2300,6 +2436,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2389,6 +2526,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2468,6 +2606,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2547,6 +2686,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2617,6 +2757,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2676,6 +2817,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2758,6 +2900,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2875,6 +3018,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2933,6 +3077,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -2985,6 +3130,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);
@@ -3030,6 +3176,25 @@ mod test {
                 attr("action", "set_fee".to_string()),
                 attr("fee", "22".to_string()),
                 attr("token", "token_address".to_string()),
+                attr("from", owner.to_string())
+            ]
+        );
+
+        let collector = "address_to_be_collector_2";
+        let rsp = execute(
+            deps.as_mut(),
+            env.clone(),
+            info.clone(),
+            FundManagerExecuteMsg::SetFeeCollector {
+                collector: collector.to_string(),
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            rsp.attributes,
+            vec![
+                attr("action", "set_fee_collector".to_string()),
+                attr("collector", collector.to_string()),
                 attr("from", owner.to_string())
             ]
         );
@@ -3379,6 +3544,14 @@ mod test {
             "eyJ0b2tlbiI6InRva2VuX2FkZHJlc3MiLCJhbW91bnQiOiIyMiJ9"
         );
 
+        let rsp = query(
+            deps.as_ref(),
+            env.clone(),
+            FundManagerQueryMsg::FeeCollector {},
+        )
+        .unwrap();
+        assert_eq!(rsp.to_string(), "ImFkZHJlc3NfdG9fYmVfY29sbGVjdG9yXzIi");
+
         let rsp = query_liquidity(
             deps.as_ref(),
             "unexist".to_string(),
@@ -3438,6 +3611,7 @@ mod test {
         let info = mock_info(owner, &[]);
         let msg = InstantiateMsg {
             owner: owner.to_string(),
+            fee_collector: owner.to_string(),
         };
 
         let res = instantiate(deps.as_mut(), env.clone(), info.clone(), msg);

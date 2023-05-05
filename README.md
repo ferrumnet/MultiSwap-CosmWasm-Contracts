@@ -120,14 +120,14 @@ open tarpaulin-report.html
 ```
 || Uncovered Lines:
 || contracts/fiberrouter-base/src/contract.rs: 48
-|| contracts/fundmanager-base/src/contract.rs: 623, 662
+|| contracts/fundmanager-base/src/contract.rs: 659, 698
 || Tested/Total Lines:
-|| contracts/fiberrouter-base/src/contract.rs: 91/92 +20.65%
-|| contracts/fundmanager-base/src/contract.rs: 337/339 +0.00%
+|| contracts/fiberrouter-base/src/contract.rs: 91/92 +0.00%
+|| contracts/fundmanager-base/src/contract.rs: 356/358 +0.03%
 || packages/fiberrouter/src/event.rs: 8/8 +0.00%
-|| packages/fundmanager/src/event.rs: 55/55 +0.00%
+|| packages/fundmanager/src/event.rs: 59/59 +0.00%
 || packages/fundmanager/src/helpers.rs: 9/9 +0.00%
 || packages/fundmanager/src/query.rs: 5/5 +0.00%
 ||
-99.41% coverage, 505/508 lines covered, +3.74% change in coverage
+99.44% coverage, 528/531 lines covered, +0.03% change in coverage
 ```
