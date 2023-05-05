@@ -4,6 +4,8 @@ use fundmanager::Liquidity;
 
 /// Store the owner of the contract to add/remove signers
 pub const OWNER: Item<Addr> = Item::new("owner");
+/// Store the fee collector address
+pub const FEE_COLLECTOR: Item<Addr> = Item::new("fee_collector");
 /// Store fee configuration
 pub const FEE: Map<&str, Uint128> = Map::new("fee");
 /// Store the liquidities map, `(owner, token) -> liquidity`

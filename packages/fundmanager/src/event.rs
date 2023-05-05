@@ -16,6 +16,20 @@ impl<'a> Event for TransferOwnershipEvent<'a> {
 }
 
 /// Tracks fee additions
+pub struct SetFeeCollectorEvent<'a> {
+    pub from: &'a str,
+    pub collector: &'a str,
+}
+
+impl<'a> Event for SetFeeCollectorEvent<'a> {
+    fn add_attributes(&self, rsp: &mut Response) {
+        rsp.attributes.push(attr("action", "set_fee_collector"));
+        rsp.attributes.push(attr("collector", self.collector));
+        rsp.attributes.push(attr("from", self.from));
+    }
+}
+
+/// Tracks fee additions
 pub struct SetFeeEvent<'a> {
     pub from: &'a str,
     pub token: &'a str,

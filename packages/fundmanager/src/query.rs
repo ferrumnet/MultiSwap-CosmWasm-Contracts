@@ -14,6 +14,7 @@ pub enum FundManagerQueryMsg {
         start_after: Option<(String, Addr)>,
         limit: Option<u32>,
     },
+    FeeCollector {},
     Owner {},
     Signers {
         start_after: Option<String>,

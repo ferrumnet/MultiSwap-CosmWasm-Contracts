@@ -4,9 +4,9 @@
 # VALIDATOR=$(cudos-noded keys show -a validator --keyring-backend=test)
 # cudos-noded tx wasm store cw-plus/fundmanager_base.wasm --from=validator --keyring-backend=test --chain-id=test --node http://localhost:26657 --gas=auto --gas-adjustment=1.3 -y
 # deploy with admin upgradeable
-# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$VALIDATOR -y
+# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'","fee_collector":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --admin=$VALIDATOR -y
 # deploy without admin
-# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --no-admin -y
+# cudos-noded tx wasm instantiate 1 '{"owner":"'$VALIDATOR'","fee_collector":"'$VALIDATOR'"}' --from=validator --label "FerrumFundManager" --chain-id=test --gas=auto --gas-adjustment=1.3 -b=block --keyring-backend=test --no-admin -y
 # CONTRACT=cudos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9strccpl
 # cudos-noded tx wasm execute $CONTRACT '{"add_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"remove_foundry_asset":{"token":"stake"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
@@ -18,7 +18,9 @@
 # cudos-noded tx wasm execute $CONTRACT '{"remove_signer":{"signer":"0x0bdb79846e8331a19a65430363f240ec8acc2a52"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"transfer_ownership":{"new_owner":"cudos1nysrj2xxpm77xpkvglne0zcvnxuq0laacc7nrv"}}' --amount=1000stake --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test
 # cudos-noded tx wasm execute $CONTRACT '{"set_fee":{"token":"stake","fee":"800"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
+# cudos-noded tx wasm execute $CONTRACT '{"set_fee_collector":{"collector":"cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
 
+# cudos-noded query wasm contract-state smart $CONTRACT '{"fee_collector":{}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"liquidity":{"owner":"'$VALIDATOR'","token":"stake"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{"start_after":["acudos", "cudos1syysfe8ryh7ltnpqe9xvf59thdpyqp8x6aewxh"]}}'

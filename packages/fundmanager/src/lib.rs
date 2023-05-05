@@ -1,7 +1,7 @@
 pub use crate::event::{
     AddFoundryAssetEvent, AddLiquidityEvent, AddSignerEvent, BridgeSwapEvent,
     BridgeWithdrawSignedEvent, RemoveFoundryAssetEvent, RemoveLiquidityEvent, RemoveSignerEvent,
-    SetFeeEvent, TransferOwnershipEvent,
+    SetFeeCollectorEvent, SetFeeEvent, TransferOwnershipEvent,
 };
 pub use crate::helpers::FundManagerContract;
 pub use crate::msg::{FundManagerExecuteMsg, MigrateMsg, WithdrawSignMessage};
