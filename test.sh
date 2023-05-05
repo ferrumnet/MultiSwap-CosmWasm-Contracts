@@ -20,6 +20,7 @@
 # cudos-noded tx wasm execute $CONTRACT '{"set_fee":{"token":"stake","fee":"800"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
 # cudos-noded tx wasm execute $CONTRACT '{"set_fee_collector":{"collector":"cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym"}}' --from=validator --gas=auto --gas-adjustment=1.3 --chain-id=test -y --keyring-backend=test 
 
+# cudos-noded query bank balances cudos167mthp8jzz40f2vjz6m8x2m77lkcnp7nxsk5ym
 # cudos-noded query wasm contract-state smart $CONTRACT '{"fee_collector":{}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"liquidity":{"owner":"'$VALIDATOR'","token":"stake"}}'
 # cudos-noded query wasm contract-state smart $CONTRACT '{"all_liquidity":{}}'

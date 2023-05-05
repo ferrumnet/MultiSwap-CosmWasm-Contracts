@@ -455,9 +455,9 @@ pub fn execute_swap(
     let fee_amount = amount * fee / fee_multiplier;
 
     if !fee_amount.is_zero() {
-        let owner = OWNER.load(deps.storage)?;
+        let fee_collector = FEE_COLLECTOR.load(deps.storage)?;
         let bank_send_msg = CosmosMsg::Bank(BankMsg::Send {
-            to_address: owner.to_string(),
+            to_address: fee_collector.to_string(),
             amount: coins(fee_amount.u128(), token.to_string()),
         });
         rsp = Response::new().add_message(bank_send_msg);
