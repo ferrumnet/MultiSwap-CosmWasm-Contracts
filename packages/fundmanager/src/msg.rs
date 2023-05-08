@@ -9,6 +9,9 @@ pub enum FundManagerExecuteMsg {
     TransferOwnership {
         new_owner: String,
     },
+    SetFeeCollector {
+        collector: String,
+    },
     SetFee {
         token: String,
         fee: Uint128,
