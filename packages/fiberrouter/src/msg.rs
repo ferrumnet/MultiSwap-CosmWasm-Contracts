@@ -16,6 +16,7 @@ pub enum FiberRouterExecuteMsg {
         target_chain_id: String,
         target_token: String,
         target_address: String,
+        swap_bridge_amount: Uint128,
     },
     WithdrawSigned {
         payee: String,

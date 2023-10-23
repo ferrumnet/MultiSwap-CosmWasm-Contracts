@@ -142,6 +142,7 @@ pub struct BridgeSwapEvent<'a> {
     pub target_token: &'a str,
     pub target_address: &'a str,
     pub fee_amount: Uint128,
+    pub swap_bridge_amount: Uint128,
 }
 
 impl<'a> Event for BridgeSwapEvent<'a> {
@@ -151,6 +152,8 @@ impl<'a> Event for BridgeSwapEvent<'a> {
         rsp.attributes.push(attr("token", self.token));
         rsp.attributes.push(attr("amount", self.amount));
         rsp.attributes.push(attr("fee_amount", self.fee_amount));
+        rsp.attributes
+            .push(attr("swap_bridge_amount", self.swap_bridge_amount));
         rsp.attributes
             .push(attr("target_chain_id", self.target_chain_id));
         rsp.attributes.push(attr("target_token", self.target_token));
