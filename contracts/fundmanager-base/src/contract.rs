@@ -80,7 +80,14 @@ pub fn execute(
             target_chain_id,
             target_token,
             target_address,
-        } => execute_swap(env, target_chain_id, target_token, target_address),
+            swap_bridge_amount,
+        } => execute_swap(
+            env,
+            target_chain_id,
+            target_token,
+            target_address,
+            swap_bridge_amount,
+        ),
     }
 }
 
@@ -425,6 +432,7 @@ pub fn execute_swap(
     target_chain_id: String,
     target_token: String,
     target_address: String,
+    swap_bridge_amount: Uint128,
 ) -> Result<Response, ContractError> {
     if target_chain_id.is_empty() || target_token.is_empty() || target_address.is_empty() {
         return Err(ContractError::InvalidTargetInfo);
@@ -471,6 +479,7 @@ pub fn execute_swap(
         target_token: &target_token,
         target_address: &target_address,
         fee_amount: fee_amount,
+        swap_bridge_amount: swap_bridge_amount,
     };
     event.add_attributes(&mut rsp);
     Ok(rsp)
@@ -2938,6 +2947,7 @@ mod test {
             "137".to_string(),
             "token_address_out_chain".to_string(),
             "user_address_out_chain".to_string(),
+            Uint128::from(10u128),
         )
         .unwrap();
 
@@ -2949,6 +2959,7 @@ mod test {
                 attr("token", token.clone()),
                 attr("amount", amount),
                 attr("fee_amount", "0".to_string()),
+                attr("swap_bridge_amount", Uint128::from(10u128)),
                 attr("target_chain_id", "137".to_string()),
                 attr("target_token", "token_address_out_chain".to_string()),
                 attr("target_address", "user_address_out_chain".to_string()),
@@ -2981,6 +2992,7 @@ mod test {
             "137".to_string(),
             "token_address_out_chain".to_string(),
             "user_address_out_chain".to_string(),
+            Uint128::from(10u128),
         )
         .unwrap();
 
@@ -2992,6 +3004,7 @@ mod test {
                 attr("token", token.clone()),
                 attr("amount", amount),
                 attr("fee_amount", "140".to_string()),
+                attr("swap_bridge_amount", Uint128::from(10u128)),
                 attr("target_chain_id", "137".to_string()),
                 attr("target_token", "token_address_out_chain".to_string()),
                 attr("target_address", "user_address_out_chain".to_string()),
@@ -3061,7 +3074,8 @@ mod test {
                 execute_env,
                 "137".to_string(),
                 "token_address_out_chain".to_string(),
-                "user_address_out_chain".to_string()
+                "user_address_out_chain".to_string(),
+                Uint128::from(10u128),
             )
             .unwrap_err()
             .to_string(),
@@ -3114,7 +3128,8 @@ mod test {
                 execute_env,
                 "137".to_string(),
                 "".to_string(),
-                "user_address_out_chain".to_string()
+                "user_address_out_chain".to_string(),
+                Uint128::from(10u128),
             )
             .unwrap_err()
             .to_string(),
@@ -3462,6 +3477,7 @@ mod test {
                 target_chain_id: "137".to_string(),
                 target_token: "token_address_out_chain".to_string(),
                 target_address: "user_address_out_chain".to_string(),
+                swap_bridge_amount: Uint128::from(10u128),
             },
         )
         .unwrap();
@@ -3474,6 +3490,7 @@ mod test {
                 attr("token", token.clone()),
                 attr("amount", Uint128::from(777u128)),
                 attr("fee_amount", Uint128::from(1u128)),
+                attr("swap_bridge_amount", Uint128::from(10u128)),
                 attr("target_chain_id", "137".to_string()),
                 attr("target_token", "token_address_out_chain".to_string()),
                 attr("target_address", "user_address_out_chain".to_string())

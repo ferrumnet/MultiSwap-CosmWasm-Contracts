@@ -57,7 +57,14 @@ pub fn execute(
             target_chain_id,
             target_token,
             target_address,
-        } => execute_swap(env, target_chain_id, target_token, target_address),
+            swap_bridge_amount,
+        } => execute_swap(
+            env,
+            target_chain_id,
+            target_token,
+            target_address,
+            swap_bridge_amount,
+        ),
     }
 }
 
@@ -141,6 +148,7 @@ pub fn execute_swap(
     target_chain_id: String,
     target_token: String,
     target_address: String,
+    swap_bridge_amount: Uint128,
 ) -> Result<Response, ContractError> {
     let ExecuteEnv { deps, info } = env;
     let pool = POOL.load(deps.storage)?;
@@ -153,6 +161,7 @@ pub fn execute_swap(
             target_chain_id: target_chain_id.to_string(),
             target_token: target_token.to_string(),
             target_address: target_address.to_string(),
+            swap_bridge_amount: swap_bridge_amount,
         },
         info.funds,
     )?;
@@ -162,7 +171,8 @@ pub fn execute_swap(
         .add_attribute("action", "swap")
         .add_attribute("target_chain_id", target_chain_id)
         .add_attribute("target_token", target_token)
-        .add_attribute("target_address", target_address);
+        .add_attribute("target_address", target_address)
+        .add_attribute("swap_bridge_amount", swap_bridge_amount);
     Ok(res)
 }
 
@@ -436,6 +446,7 @@ mod test {
             "137".to_string(),
             "token_address_out_chain".to_string(),
             "user_address_out_chain".to_string(),
+            Uint128::from(10u128),
         )
         .unwrap();
 
@@ -446,6 +457,7 @@ mod test {
                 attr("target_chain_id", "137".to_string()),
                 attr("target_token", "token_address_out_chain".to_string()),
                 attr("target_address", "user_address_out_chain".to_string()),
+                attr("swap_bridge_amount", Uint128::from(10u128)),
             ]
         );
 
@@ -560,6 +572,7 @@ mod test {
                 target_chain_id: "137".to_string(),
                 target_token: "token_address_out_chain".to_string(),
                 target_address: "user_address_out_chain".to_string(),
+                swap_bridge_amount: Uint128::from(10u128),
             },
         )
         .unwrap();
@@ -570,7 +583,8 @@ mod test {
                 attr("action", "swap".to_string()),
                 attr("target_chain_id", "137".to_string()),
                 attr("target_token", "token_address_out_chain".to_string()),
-                attr("target_address", "user_address_out_chain".to_string())
+                attr("target_address", "user_address_out_chain".to_string()),
+                attr("swap_bridge_amount", Uint128::from(10u128)),
             ]
         );
 
